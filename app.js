@@ -15,18 +15,22 @@ const db = firebase.firestore();
 
 // ===== LocalStorage Migration Helper =====
 async function migrateToCloud() {
-    const localFolders = JSON.parse(localStorage.getItem('inventario_folders') || '[]');
-    const localProducts = JSON.parse(localStorage.getItem('inventario_products') || '[]');
-    
-    if (localFolders.length > 0 || localProducts.length > 0) {
-        console.log('Detectados datos locales. Migrando a la nube...');
-        for (const f of localFolders) await db.collection('folders').doc(f.id).set(f);
-        for (const p of localProducts) await db.collection('products').doc(p.id).set(p);
+    try {
+        const localFolders = JSON.parse(localStorage.getItem('inventario_folders') || '[]');
+        const localProducts = JSON.parse(localStorage.getItem('inventario_products') || '[]');
         
-        // Limpiar local para no repetir
-        localStorage.removeItem('inventario_folders');
-        localStorage.removeItem('inventario_products');
-        console.log('Migración completada ✅');
+        if (localFolders.length > 0 || localProducts.length > 0) {
+            console.log('🚀 Migración: Detectados datos locales. Subiendo...');
+            for (const f of localFolders) await db.collection('folders').doc(f.id).set(f);
+            for (const p of localProducts) await db.collection('products').doc(p.id).set(p);
+            
+            localStorage.removeItem('inventario_folders');
+            localStorage.removeItem('inventario_products');
+            console.log('✅ Migración: ¡Todo subido a la nube!');
+            showToast('Sincronización inicial completada', 'success');
+        }
+    } catch (err) {
+        console.error('❌ Error en migración:', err);
     }
 }
 
@@ -44,6 +48,7 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 // ===== Init =====
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🔌 Conectando con Firebase...');
     await migrateToCloud();
     loadData();
     showFoldersView();
@@ -55,15 +60,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 function loadData() {
     // Listen to Folders
     db.collection('folders').onSnapshot((snapshot) => {
+        console.log('📂 Carpetas actualizadas desde la nube');
         folders = snapshot.docs.map(doc => doc.data());
         if (currentView === 'folders') renderFolders();
         updateStats();
-    });
+    }, err => console.error('❌ Error leyendo carpetas:', err));
 
     // Listen to Products
     db.collection('products').onSnapshot((snapshot) => {
+        console.log('📦 Productos actualizados desde la nube');
         products = snapshot.docs.map(doc => doc.data());
-        // Initialize sales tracking if missing
         products.forEach(p => { if (p.totalSold === undefined) p.totalSold = 0; });
         
         if (currentView === 'products') {
@@ -71,7 +77,7 @@ function loadData() {
             renderChart();
         }
         updateStats();
-    });
+    }, err => console.error('❌ Error leyendo productos:', err));
 }
 
 async function saveFolderToCloud(folder) { await db.collection('folders').doc(folder.id).set(folder); }
