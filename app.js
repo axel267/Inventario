@@ -1,10 +1,36 @@
-/* ========================================
-   INVENTARIO APP - Main JavaScript
-   Organized by Folders (Categories)
-   All data persisted in localStorage
-   ======================================== */
+// ===== Firebase Config =====
+const firebaseConfig = {
+  apiKey: "AIzaSyD87O7QCdy26JPdzcQrOHZcYEG17jmoEVE",
+  authDomain: "miinventary.firebaseapp.com",
+  projectId: "miinventary",
+  storageBucket: "miinventary.firebasestorage.app",
+  messagingSenderId: "191420103988",
+  appId: "1:191420103988:web:be7594143a6801533cf961",
+  measurementId: "G-N726BCSK4C"
+};
 
-// ===== State =====
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ===== LocalStorage Migration Helper =====
+async function migrateToCloud() {
+    const localFolders = JSON.parse(localStorage.getItem('inventario_folders') || '[]');
+    const localProducts = JSON.parse(localStorage.getItem('inventario_products') || '[]');
+    
+    if (localFolders.length > 0 || localProducts.length > 0) {
+        console.log('Detectados datos locales. Migrando a la nube...');
+        for (const f of localFolders) await db.collection('folders').doc(f.id).set(f);
+        for (const p of localProducts) await db.collection('products').doc(p.id).set(p);
+        
+        // Limpiar local para no repetir
+        localStorage.removeItem('inventario_folders');
+        localStorage.removeItem('inventario_products');
+        console.log('Migración completada ✅');
+    }
+}
+
+// ===== State & Sync =====
 let folders = [];
 let products = [];
 let currentView = 'folders'; // 'folders' | 'products'
@@ -17,7 +43,8 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 // ===== Init =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await migrateToCloud();
     loadData();
     showFoldersView();
     updateStats();
@@ -25,15 +52,35 @@ document.addEventListener('DOMContentLoaded', () => {
     registerServiceWorker();
 });
 
-// ===== LocalStorage =====
 function loadData() {
-    folders = JSON.parse(localStorage.getItem('inventario_folders') || '[]');
-    products = JSON.parse(localStorage.getItem('inventario_products') || '[]');
-    // Initialize sales tracking for existing products
-    products.forEach(p => { if (p.totalSold === undefined) p.totalSold = 0; });
+    // Listen to Folders
+    db.collection('folders').onSnapshot((snapshot) => {
+        folders = snapshot.docs.map(doc => doc.data());
+        if (currentView === 'folders') renderFolders();
+        updateStats();
+    });
+
+    // Listen to Products
+    db.collection('products').onSnapshot((snapshot) => {
+        products = snapshot.docs.map(doc => doc.data());
+        // Initialize sales tracking if missing
+        products.forEach(p => { if (p.totalSold === undefined) p.totalSold = 0; });
+        
+        if (currentView === 'products') {
+            renderProducts();
+            renderChart();
+        }
+        updateStats();
+    });
 }
-function saveFolders() { localStorage.setItem('inventario_folders', JSON.stringify(folders)); }
-function saveProducts() { localStorage.setItem('inventario_products', JSON.stringify(products)); }
+
+async function saveFolderToCloud(folder) { await db.collection('folders').doc(folder.id).set(folder); }
+async function deleteFolderFromCloud(id) { await db.collection('folders').doc(id).delete(); }
+
+async function saveProductToCloud(product) { await db.collection('products').doc(product.id).set(product); }
+async function deleteProductFromCloud(id) { await db.collection('products').doc(id).delete(); }
+
+// ===== Navigation =====
 
 // ===== Navigation =====
 function showFoldersView() {
@@ -172,7 +219,7 @@ function openEditFolderModal(id) {
     openModal($('#folderModalOverlay'));
 }
 
-function handleFolderSubmit(e) {
+async function handleFolderSubmit(e) {
     e.preventDefault();
     const name = $('#folderName').value.trim();
     const icon = $('#folderIcon').value.trim() || '📦';
@@ -183,21 +230,27 @@ function handleFolderSubmit(e) {
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
 
     if (editId) {
-        const idx = folders.findIndex(f => f.id === editId);
-        if (idx !== -1) {
+        const folder = folders.find(f => f.id === editId);
+        if (folder) {
             // Update category name in products too
-            const oldName = folders[idx].name;
-            products.forEach(p => { if (p.category === oldName) p.category = name; });
-            folders[idx] = { ...folders[idx], name, icon, color };
+            const oldName = folder.name;
+            if (oldName !== name) {
+                products.forEach(async p => {
+                    if (p.category === oldName) {
+                        p.category = name;
+                        await saveProductToCloud(p);
+                    }
+                });
+            }
+            await saveFolderToCloud({ ...folder, name, icon, color });
             showToast('Carpeta actualizada ✅', 'success');
         }
     } else {
-        folders.push({ id: generateId(), name, icon, color });
+        const newFolder = { id: generateId(), name, icon, color };
+        await saveFolderToCloud(newFolder);
         showToast('Carpeta creada ✅', 'success');
     }
 
-    saveFolders(); saveProducts();
-    renderFolders(); updateStats();
     closeModal($('#folderModalOverlay'));
 }
 
@@ -209,16 +262,18 @@ function openDeleteFolderModal(id) {
     openModal($('#deleteFolderModalOverlay'));
 }
 
-function handleDeleteFolderConfirm() {
+async function handleDeleteFolderConfirm() {
     if (!currentDeleteFolderId) return;
     const folder = folders.find(f => f.id === currentDeleteFolderId);
     const name = folder ? folder.name : '';
-    // Remove products in this folder
-    products = products.filter(p => p.category !== name);
-    folders = folders.filter(f => f.id !== currentDeleteFolderId);
+    
+    // Remove products in this folder in cloud
+    const toDelete = products.filter(p => p.category === name);
+    for (const p of toDelete) await deleteProductFromCloud(p.id);
+    
+    await deleteFolderFromCloud(currentDeleteFolderId);
+    
     currentDeleteFolderId = null;
-    saveFolders(); saveProducts();
-    renderFolders(); updateStats();
     closeModal($('#deleteFolderModalOverlay'));
     showToast(`Carpeta "${name}" eliminada`, 'error');
 }
@@ -303,7 +358,7 @@ function resizeImage(dataUrl, maxW, maxH, cb) {
     img.src = dataUrl;
 }
 
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
     e.preventDefault();
     const editId = $('#editProductId').value;
     const name = $('#productName').value.trim();
@@ -315,17 +370,17 @@ function handleFormSubmit(e) {
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
 
     if (editId) {
-        const idx = products.findIndex(p => p.id === editId);
-        if (idx !== -1) {
-            products[idx] = { ...products[idx], name, description, stock, category, image: image || products[idx].image, updatedAt: new Date().toISOString() };
+        const product = products.find(p => p.id === editId);
+        if (product) {
+            const updated = { ...product, name, description, stock, category, image: image || product.image, updatedAt: new Date().toISOString() };
+            await saveProductToCloud(updated);
             showToast('Producto actualizado ✅', 'success');
         }
     } else {
-        products.unshift({ id: generateId(), name, description, stock, category, image: image || '', totalSold: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        const newProduct = { id: generateId(), name, description, stock, category, image: image || '', totalSold: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        await saveProductToCloud(newProduct);
         showToast('Producto agregado ✅', 'success');
     }
-    saveProducts(); renderProducts(); renderChart(); updateStats();
-    renderFolders();
     closeModal($('#modalOverlay'));
 }
 
@@ -402,52 +457,55 @@ function openStockModal(id) {
 
 function getStockAdjustAmount() { return parseInt($('#stockAdjustInput').value) || 1; }
 
-function adjustStock(amount) {
+async function adjustStock(amount) {
     if (!currentStockProductId) return;
     const product = products.find(p => p.id === currentStockProductId);
     if (!product) return;
     const oldStock = product.stock;
-    product.stock = Math.max(0, product.stock + amount);
-    // Track sales (stock decreased = sale)
+    const newStock = Math.max(0, product.stock + amount);
+    
+    let totalSold = product.totalSold || 0;
     if (amount < 0) {
-        const sold = oldStock - product.stock;
-        product.totalSold = (product.totalSold || 0) + sold;
+        totalSold += (oldStock - newStock);
     }
-    product.updatedAt = new Date().toISOString();
-    $('#stockCurrentValue').textContent = product.stock;
-    saveProducts(); renderProducts(); renderChart(); updateStats();
+    
+    await saveProductToCloud({ ...product, stock: newStock, totalSold, updatedAt: new Date().toISOString() });
+    
+    $('#stockCurrentValue').textContent = newStock;
     const action = amount > 0 ? `+${amount}` : `${amount}`;
-    showToast(`Stock de "${product.name}": ${action} → ${product.stock} pz`, 'info');
+    showToast(`Stock de "${product.name}": ${action} → ${newStock} pz`, 'info');
 }
 
-function adjustStockQuick(id, amount) {
+async function adjustStockQuick(id, amount) {
     const product = products.find(p => p.id === id);
     if (!product) return;
     const oldStock = product.stock;
-    product.stock = Math.max(0, product.stock + amount);
+    const newStock = Math.max(0, product.stock + amount);
+    
+    let totalSold = product.totalSold || 0;
     if (amount < 0) {
-        const sold = oldStock - product.stock;
-        product.totalSold = (product.totalSold || 0) + sold;
+        totalSold += (oldStock - newStock);
     }
-    product.updatedAt = new Date().toISOString();
-    saveProducts(); renderProducts(); renderChart(); updateStats();
+    
+    await saveProductToCloud({ ...product, stock: newStock, totalSold, updatedAt: new Date().toISOString() });
 }
 
-function handleSetStock() {
+async function handleSetStock() {
     const val = parseInt($('#stockSetDirect').value);
     if (isNaN(val) || val < 0) { showToast('Número inválido', 'error'); return; }
     const product = products.find(p => p.id === currentStockProductId);
     if (!product) return;
     const oldStock = product.stock;
-    product.stock = val;
-    // If stock went down, count as sale
+    
+    let totalSold = product.totalSold || 0;
     if (val < oldStock) {
-        product.totalSold = (product.totalSold || 0) + (oldStock - val);
+        totalSold += (oldStock - val);
     }
-    product.updatedAt = new Date().toISOString();
+    
+    await saveProductToCloud({ ...product, stock: val, totalSold, updatedAt: new Date().toISOString() });
+    
     $('#stockCurrentValue').textContent = val;
     $('#stockSetDirect').value = '';
-    saveProducts(); renderProducts(); renderChart(); updateStats();
     showToast(`Stock de "${product.name}" → ${val} pz`, 'success');
 }
 
@@ -460,13 +518,12 @@ function openDeleteModal(id) {
     openModal($('#deleteModalOverlay'));
 }
 
-function handleDeleteConfirm() {
+async function handleDeleteConfirm() {
     if (!currentDeleteProductId) return;
     const product = products.find(p => p.id === currentDeleteProductId);
     const name = product ? product.name : '';
-    products = products.filter(p => p.id !== currentDeleteProductId);
+    await deleteProductFromCloud(currentDeleteProductId);
     currentDeleteProductId = null;
-    saveProducts(); renderProducts(); renderChart(); updateStats(); renderFolders();
     closeModal($('#deleteModalOverlay'));
     showToast(`"${name}" eliminado`, 'error');
 }
@@ -650,14 +707,19 @@ function toggleChart() {
     btn.classList.toggle('collapsed');
 }
 
-function resetSales() {
-    let targetProducts = products;
+async function resetSales() {
+    if (!confirm('¿Seguro que quieres reiniciar el reporte de ventas de esta carpeta? El stock no se verá afectado.')) return;
+    
+    let toReset = products;
     if (currentFolderId) {
         const folder = folders.find(f => f.id === currentFolderId);
-        if (folder) targetProducts = products.filter(p => p.category === folder.name);
+        if (folder) toReset = products.filter(p => p.category === folder.name);
     }
-    targetProducts.forEach(p => p.totalSold = 0);
-    saveProducts(); renderChart();
+    
+    for (const p of toReset) {
+        await saveProductToCloud({ ...p, totalSold: 0 });
+    }
+    
     showToast('Ventas reiniciadas', 'info');
 }
 
