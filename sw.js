@@ -1,11 +1,13 @@
-const CACHE_NAME = 'inventario-v1';
+const CACHE_NAME = 'inventario-v2';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './icon.png',
-  './manifest.json'
+  './manifest.json',
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js'
 ];
 
 // Instalar el Service Worker y guardar en caché los recursos
@@ -28,8 +30,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Estrategia de red: Cache First, falling back to network
+// Estrategia de red: Solo interceptar archivos locales del inventario
 self.addEventListener('fetch', (event) => {
+  // No interceptar peticiones a Firebase o APIs externas
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
