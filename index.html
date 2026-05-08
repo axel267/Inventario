@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="App de gestión de inventario - Controla tu stock de productos por categorías">
+    <title>Mi Inventario</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6c63ff">
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">📦</span>
+                <h1>Mi Inventario</h1>
+            </div>
+            <p class="header-subtitle">Gestiona tu stock de forma simple</p>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <section class="stats-bar">
+        <div class="stat-card">
+            <span class="stat-number" id="totalProducts">0</span>
+            <span class="stat-label">Productos</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="totalStock">0</span>
+            <span class="stat-label">Piezas Totales</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="lowStockCount">0</span>
+            <span class="stat-label">Stock Bajo</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="totalCategories">0</span>
+            <span class="stat-label">Carpetas</span>
+        </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- VIEW: FOLDERS (Categories) - Main view      -->
+    <!-- ============================================ -->
+    <section id="foldersView">
+        <div class="actions-section">
+            <button class="btn-add" id="btnNewFolder">
+                <span class="btn-icon">📁</span>
+                Nueva Carpeta
+            </button>
+            <button class="btn-add btn-add-secondary" id="btnViewAll">
+                <span class="btn-icon">📋</span>
+                Ver Todo
+            </button>
+        </div>
+
+        <!-- Folder Grid -->
+        <div class="folder-grid" id="folderGrid">
+            <!-- Folders rendered here -->
+        </div>
+
+        <!-- Empty Folders State -->
+        <div class="empty-state" id="emptyFoldersState">
+            <div class="empty-icon">📁</div>
+            <h2>No hay carpetas aún</h2>
+            <p>Crea tu primera carpeta para organizar tu inventario por categorías</p>
+        </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- VIEW: PRODUCTS (Inside a folder or all)     -->
+    <!-- ============================================ -->
+    <section id="productsView" style="display:none;">
+        <!-- Breadcrumb / Back -->
+        <div class="breadcrumb-bar">
+            <button class="btn-back" id="btnBack">
+                <span>←</span> Volver a Carpetas
+            </button>
+            <h2 class="breadcrumb-title" id="breadcrumbTitle">Todos los productos</h2>
+        </div>
+
+        <!-- Sales Chart -->
+        <div class="chart-section" id="chartSection">
+            <div class="chart-header">
+                <div class="chart-title-group">
+                    <span class="chart-icon">📊</span>
+                    <h3 class="chart-title">Reporte de Ventas</h3>
+                </div>
+                <div class="chart-actions">
+                    <button class="btn-reset-sales" id="btnResetSales" title="Reiniciar ventas">🔄 Reiniciar</button>
+                    <button class="chart-toggle" id="btnToggleChart">▲</button>
+                </div>
+            </div>
+            <div class="chart-body" id="chartBody">
+                <div class="chart-summary" id="chartSummary"></div>
+                <canvas id="salesChart" width="800" height="300"></canvas>
+                <div class="chart-empty" id="chartEmpty" style="display:none;">
+                    <p>Aún no hay ventas registradas. Cuando quites stock de un producto, se registrará como venta aquí.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions-section">
+            <button class="btn-add" id="btnOpenModal">
+                <span class="btn-icon">+</span>
+                Agregar Producto
+            </button>
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar producto...">
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <main class="product-grid" id="productGrid">
+            <!-- Products will be rendered here -->
+        </main>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+            <div class="empty-icon">📋</div>
+            <h2>No hay productos en esta carpeta</h2>
+            <p>Agrega tu primer producto para empezar a controlar tu inventario</p>
+        </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- MODAL: New Folder                           -->
+    <!-- ============================================ -->
+    <div class="modal-overlay" id="folderModalOverlay">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2 id="folderModalTitle">Nueva Carpeta</h2>
+                <button class="modal-close" id="btnCloseFolderModal">&times;</button>
+            </div>
+            <form id="folderForm" class="modal-body">
+                <div class="form-group">
+                    <label for="folderName">Nombre de la carpeta *</label>
+                    <input type="text" id="folderName" class="form-input" placeholder="Ej: Calzado, Juguetes, Electrónicos..." required>
+                </div>
+                <div class="form-group">
+                    <label for="folderIcon">Ícono (emoji)</label>
+                    <div class="icon-picker">
+                        <input type="text" id="folderIcon" class="form-input icon-input" value="📦" maxlength="4">
+                        <div class="icon-suggestions">
+                            <button type="button" class="icon-btn" data-icon="👟">👟</button>
+                            <button type="button" class="icon-btn" data-icon="🧸">🧸</button>
+                            <button type="button" class="icon-btn" data-icon="👕">👕</button>
+                            <button type="button" class="icon-btn" data-icon="🎒">🎒</button>
+                            <button type="button" class="icon-btn" data-icon="💻">💻</button>
+                            <button type="button" class="icon-btn" data-icon="🔧">🔧</button>
+                            <button type="button" class="icon-btn" data-icon="🍔">🍔</button>
+                            <button type="button" class="icon-btn" data-icon="💊">💊</button>
+                            <button type="button" class="icon-btn" data-icon="📱">📱</button>
+                            <button type="button" class="icon-btn" data-icon="🏠">🏠</button>
+                            <button type="button" class="icon-btn" data-icon="⚽">⚽</button>
+                            <button type="button" class="icon-btn" data-icon="🎮">🎮</button>
+                            <button type="button" class="icon-btn" data-icon="📚">📚</button>
+                            <button type="button" class="icon-btn" data-icon="🧴">🧴</button>
+                            <button type="button" class="icon-btn" data-icon="🪑">🪑</button>
+                            <button type="button" class="icon-btn" data-icon="🎁">🎁</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="folderColor">Color de la carpeta</label>
+                    <div class="color-picker">
+                        <button type="button" class="color-btn active" data-color="#6c63ff" style="background:#6c63ff;"></button>
+                        <button type="button" class="color-btn" data-color="#00d2ff" style="background:#00d2ff;"></button>
+                        <button type="button" class="color-btn" data-color="#00e676" style="background:#00e676;"></button>
+                        <button type="button" class="color-btn" data-color="#ffab40" style="background:#ffab40;"></button>
+                        <button type="button" class="color-btn" data-color="#ff5252" style="background:#ff5252;"></button>
+                        <button type="button" class="color-btn" data-color="#e040fb" style="background:#e040fb;"></button>
+                        <button type="button" class="color-btn" data-color="#ff6e40" style="background:#ff6e40;"></button>
+                        <button type="button" class="color-btn" data-color="#40c4ff" style="background:#40c4ff;"></button>
+                    </div>
+                </div>
+                <input type="hidden" id="editFolderId" value="">
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="btnCancelFolder">Cancelar</button>
+                    <button type="submit" class="btn-save">Guardar Carpeta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: Delete Folder                        -->
+    <!-- ============================================ -->
+    <div class="modal-overlay" id="deleteFolderModalOverlay">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2>Eliminar Carpeta</h2>
+                <button class="modal-close" id="btnCloseDeleteFolderModal">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <div class="delete-icon">🗑️</div>
+                <p>¿Estás seguro de que quieres eliminar esta carpeta?</p>
+                <p class="delete-product-name" id="deleteFolderName"></p>
+                <p style="color: var(--warning); font-size: 0.85rem; margin-top: 0.5rem;">
+                    ⚠️ Los productos dentro de esta carpeta también se eliminarán
+                </p>
+                <div class="form-actions">
+                    <button class="btn-cancel" id="btnCancelDeleteFolder">Cancelar</button>
+                    <button class="btn-delete-confirm" id="btnConfirmDeleteFolder">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: Add/Edit Product                     -->
+    <!-- ============================================ -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Agregar Producto</h2>
+                <button class="modal-close" id="btnCloseModal">&times;</button>
+            </div>
+            <form id="productForm" class="modal-body">
+                <div class="form-group">
+                    <label for="productImage">Foto del producto</label>
+                    <div class="image-upload" id="imageUploadArea">
+                        <input type="file" id="productImage" accept="image/*" hidden>
+                        <div class="upload-placeholder" id="uploadPlaceholder">
+                            <span class="upload-icon">📷</span>
+                            <span>Haz clic o arrastra una imagen</span>
+                        </div>
+                        <img id="imagePreview" class="image-preview" alt="Vista previa">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="productName">Nombre del producto *</label>
+                    <input type="text" id="productName" class="form-input" placeholder="Ej: Nike Air Max 90" required>
+                </div>
+                <div class="form-group">
+                    <label for="productDescription">Descripción</label>
+                    <textarea id="productDescription" class="form-input form-textarea" placeholder="Ej: Tenis deportivos color blanco, talla 27..." rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="productStock">Stock inicial (piezas)</label>
+                    <input type="number" id="productStock" class="form-input" placeholder="0" min="0" value="0">
+                </div>
+                <input type="hidden" id="editProductId" value="">
+                <input type="hidden" id="productCategoryHidden" value="">
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="btnCancel">Cancelar</button>
+                    <button type="submit" class="btn-save">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: Stock Adjustment                     -->
+    <!-- ============================================ -->
+    <div class="modal-overlay" id="stockModalOverlay">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2>Ajustar Stock</h2>
+                <button class="modal-close" id="btnCloseStockModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="stock-product-name" id="stockProductName"></p>
+                <div class="stock-current">
+                    <span>Stock actual:</span>
+                    <span class="stock-current-value" id="stockCurrentValue">0</span>
+                    <span>pz</span>
+                </div>
+                <div class="stock-controls">
+                    <button class="stock-btn stock-btn-minus" id="stockBtnMinus">−</button>
+                    <input type="number" id="stockAdjustInput" class="stock-adjust-input" value="1" min="1">
+                    <button class="stock-btn stock-btn-plus" id="stockBtnPlus">+</button>
+                </div>
+                <div class="stock-quick-actions">
+                    <button class="quick-btn" data-amount="1">±1</button>
+                    <button class="quick-btn" data-amount="5">±5</button>
+                    <button class="quick-btn" data-amount="10">±10</button>
+                    <button class="quick-btn" data-amount="50">±50</button>
+                    <button class="quick-btn" data-amount="100">±100</button>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="stockSetDirect">O establece directamente:</label>
+                    <input type="number" id="stockSetDirect" class="form-input" placeholder="Ej: 200" min="0">
+                    <button class="btn-set-stock" id="btnSetStock">Establecer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: Delete Product                       -->
+    <!-- ============================================ -->
+    <div class="modal-overlay" id="deleteModalOverlay">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2>Eliminar Producto</h2>
+                <button class="modal-close" id="btnCloseDeleteModal">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <div class="delete-icon">🗑️</div>
+                <p>¿Estás seguro de que quieres eliminar este producto?</p>
+                <p class="delete-product-name" id="deleteProductName"></p>
+                <div class="form-actions">
+                    <button class="btn-cancel" id="btnCancelDelete">Cancelar</button>
+                    <button class="btn-delete-confirm" id="btnConfirmDelete">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
