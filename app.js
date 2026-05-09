@@ -98,23 +98,15 @@ async function handleLogin(e) {
 function loadData() {
     // Listen to Folders
     db.collection('folders').onSnapshot((snapshot) => {
-        console.log('📂 Carpetas actualizadas desde la nube');
         folders = snapshot.docs.map(doc => doc.data());
-        if (currentView === 'folders') renderFolders();
-        updateStats();
+        renderCurrentFolder();
     }, err => console.error('❌ Error leyendo carpetas:', err));
 
     // Listen to Products
     db.collection('products').onSnapshot((snapshot) => {
-        console.log('📦 Productos actualizados desde la nube');
         products = snapshot.docs.map(doc => doc.data());
         products.forEach(p => { if (p.totalSold === undefined) p.totalSold = 0; });
-        
-        if (currentView === 'products') {
-            renderProducts();
-            renderChart();
-        }
-        updateStats();
+        renderCurrentFolder();
     }, err => console.error('❌ Error leyendo productos:', err));
 }
 
