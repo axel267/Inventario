@@ -151,10 +151,26 @@ body::before {
 }
 .btn-back:hover { border-color: var(--accent-primary); color: var(--text-primary); transform: translateX(-3px); }
 .breadcrumb-title {
-    font-size: 1.2rem; font-weight: 700;
+    font-size: 1.3rem; font-weight: 700;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.breadcrumb-title span {
     background: var(--accent-gradient);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    transition: var(--transition);
 }
+.breadcrumb-title span:hover {
+    filter: brightness(1.2);
+    text-decoration: underline;
+    cursor: pointer;
+}
+.path-sep {
+    color: var(--text-muted);
+    font-weight: 300;
+    margin: 0 0.1rem;
+    -webkit-text-fill-color: var(--text-muted) !important;
+}
+
 
 /* ========================================
    FOLDER GRID

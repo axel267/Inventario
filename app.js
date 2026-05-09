@@ -37,8 +37,7 @@ async function migrateToCloud() {
 // ===== State & Sync =====
 let folders = [];
 let products = [];
-let currentView = 'folders'; // 'folders' | 'products'
-let currentFolderId = null;  // null = view all
+let currentFolderId = null;  // null = root
 let currentStockProductId = null;
 let currentDeleteProductId = null;
 let currentDeleteFolderId = null;
@@ -57,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             $('#loginOverlay').style.display = 'none';
             await migrateToCloud();
             loadData();
-            showFoldersView();
+            showFolder(null); // Empezar en la raíz
             updateStats();
             bindEvents();
         } else {
@@ -125,32 +124,51 @@ async function deleteFolderFromCloud(id) { await db.collection('folders').doc(id
 async function saveProductToCloud(product) { await db.collection('products').doc(product.id).set(product); }
 async function deleteProductFromCloud(id) { await db.collection('products').doc(id).delete(); }
 
-// ===== Navigation =====
-
-// ===== Navigation =====
-function showFoldersView() {
-    currentView = 'folders';
-    currentFolderId = null;
-    $('#foldersView').style.display = '';
-    $('#productsView').style.display = 'none';
-    renderFolders();
+// ===== Navigation & Rendering =====
+function showFolder(id) {
+    currentFolderId = id;
+    renderCurrentFolder();
 }
 
-function showProductsView(folderId = null) {
-    currentView = 'products';
-    currentFolderId = folderId;
-    $('#foldersView').style.display = 'none';
-    $('#productsView').style.display = '';
-
-    if (folderId) {
-        const folder = folders.find(f => f.id === folderId);
-        $('#breadcrumbTitle').textContent = folder ? `${folder.icon} ${folder.name}` : 'Productos';
-    } else {
-        $('#breadcrumbTitle').textContent = '📋 Todos los productos';
-    }
+function renderCurrentFolder() {
+    renderBreadcrumb();
+    renderFolders();
     renderProducts();
-    // Delay chart rendering so canvas has dimensions after display change
-    requestAnimationFrame(() => requestAnimationFrame(() => renderChart()));
+    renderChart();
+    updateStats();
+    
+    // Back button visibility
+    $('#btnBack').style.display = currentFolderId ? 'flex' : 'none';
+}
+
+function renderBreadcrumb() {
+    const title = $('#breadcrumbTitle');
+    if (!currentFolderId) {
+        title.textContent = '📁 Mis Inventarios';
+        return;
+    }
+    
+    const path = getPath(currentFolderId);
+    title.innerHTML = `
+        <span onclick="showFolder(null)" style="cursor:pointer">Inicio</span>
+        ${path.map(f => ` <span class="path-sep">/</span> <span onclick="showFolder('${f.id}')" style="cursor:pointer">${f.icon} ${f.name}</span>`).join('')}
+    `;
+}
+
+function getPath(folderId) {
+    let path = [];
+    let current = folders.find(f => f.id === folderId);
+    while (current) {
+        path.unshift(current);
+        current = folders.find(f => f.id === current.parentId);
+    }
+    return path;
+}
+
+function goBack() {
+    if (!currentFolderId) return;
+    const folder = folders.find(f => f.id === currentFolderId);
+    showFolder(folder ? folder.parentId : null);
 }
 
 // ===== Events =====
@@ -179,11 +197,8 @@ function bindEvents() {
         });
     });
 
-    // View all
-    $('#btnViewAll').addEventListener('click', () => showProductsView(null));
-
     // Back
-    $('#btnBack').addEventListener('click', showFoldersView);
+    $('#btnBack').addEventListener('click', goBack);
 
     // Product modal
     $('#btnOpenModal').addEventListener('click', openAddModal);
@@ -216,7 +231,7 @@ function bindEvents() {
     $('#btnConfirmDelete').addEventListener('click', handleDeleteConfirm);
 
     // Search
-    $('#searchInput').addEventListener('input', () => renderProducts());
+    $('#searchInput').addEventListener('input', () => renderCurrentFolder());
 
     // Close overlays on click outside / Escape
     ['modalOverlay', 'stockModalOverlay', 'deleteModalOverlay', 'folderModalOverlay', 'deleteFolderModalOverlay'].forEach(id => {
@@ -265,7 +280,7 @@ function openEditFolderModal(id) {
     openModal($('#folderModalOverlay'));
 }
 
-async function handleFolderSubmit(e) {
+function handleFolderSubmit(e) {
     e.preventDefault();
     const name = $('#folderName').value.trim();
     const icon = $('#folderIcon').value.trim() || '📦';
@@ -278,22 +293,17 @@ async function handleFolderSubmit(e) {
     if (editId) {
         const folder = folders.find(f => f.id === editId);
         if (folder) {
-            // Update category name in products too
-            const oldName = folder.name;
-            if (oldName !== name) {
-                products.forEach(async p => {
-                    if (p.category === oldName) {
-                        p.category = name;
-                        await saveProductToCloud(p);
-                    }
-                });
-            }
-            await saveFolderToCloud({ ...folder, name, icon, color });
+            saveFolderToCloud({ ...folder, name, icon, color });
             showToast('Carpeta actualizada ✅', 'success');
         }
     } else {
-        const newFolder = { id: generateId(), name, icon, color };
-        await saveFolderToCloud(newFolder);
+        const newFolder = { 
+            id: generateId(), 
+            parentId: currentFolderId, 
+            name, icon, color,
+            createdAt: new Date().toISOString() 
+        };
+        saveFolderToCloud(newFolder);
         showToast('Carpeta creada ✅', 'success');
     }
 
@@ -310,45 +320,56 @@ function openDeleteFolderModal(id) {
 
 async function handleDeleteFolderConfirm() {
     if (!currentDeleteFolderId) return;
-    const folder = folders.find(f => f.id === currentDeleteFolderId);
-    const name = folder ? folder.name : '';
     
-    // Remove products in this folder in cloud
-    const toDelete = products.filter(p => p.category === name);
-    for (const p of toDelete) await deleteProductFromCloud(p.id);
+    // Recursive Delete
+    const foldersToDelete = getAllSubfolderIds(currentDeleteFolderId);
+    foldersToDelete.push(currentDeleteFolderId);
     
-    await deleteFolderFromCloud(currentDeleteFolderId);
+    for (const fid of foldersToDelete) {
+        // Delete products in this subfolder
+        const prods = products.filter(p => p.folderId === fid);
+        for (const p of prods) await deleteProductFromCloud(p.id);
+        // Delete folder
+        await deleteFolderFromCloud(fid);
+    }
     
     currentDeleteFolderId = null;
     closeModal($('#deleteFolderModalOverlay'));
-    showToast(`Carpeta "${name}" eliminada`, 'error');
+    showToast('Carpeta y contenido eliminados', 'error');
+}
+
+function getAllSubfolderIds(parentId) {
+    let ids = [];
+    const subs = folders.filter(f => f.parentId === parentId);
+    for (const sub of subs) {
+        ids.push(sub.id);
+        ids = ids.concat(getAllSubfolderIds(sub.id));
+    }
+    return ids;
 }
 
 function renderFolders() {
     const grid = $('#folderGrid');
-    const empty = $('#emptyFoldersState');
+    const filtered = folders.filter(f => f.parentId === currentFolderId);
 
-    if (folders.length === 0) {
+    if (filtered.length === 0) {
         grid.innerHTML = '';
-        empty.classList.add('visible');
         return;
     }
-    empty.classList.remove('visible');
 
-    grid.innerHTML = folders.map((folder, i) => {
-        const count = products.filter(p => p.category === folder.name).length;
-        const totalStock = products.filter(p => p.category === folder.name).reduce((s, p) => s + p.stock, 0);
+    grid.innerHTML = filtered.map((folder, i) => {
+        const count = folders.filter(f => f.parentId === folder.id).length + 
+                      products.filter(p => p.folderId === folder.id).length;
         return `
         <div class="folder-card" style="--folder-color:${folder.color}; animation-delay:${i * 0.06}s"
-             onclick="showProductsView('${folder.id}')">
+             onclick="showFolder('${folder.id}')">
             <div class="folder-card-actions">
                 <button class="folder-action-btn" onclick="event.stopPropagation(); openEditFolderModal('${folder.id}')" title="Editar">✏️</button>
                 <button class="folder-action-btn delete" onclick="event.stopPropagation(); openDeleteFolderModal('${folder.id}')" title="Eliminar">🗑️</button>
             </div>
             <span class="folder-card-icon">${folder.icon}</span>
             <div class="folder-card-name">${escapeHtml(folder.name)}</div>
-            <div class="folder-card-count"><span>${count}</span> producto${count !== 1 ? 's' : ''}</div>
-            <div class="folder-card-stock">${totalStock} piezas en total</div>
+            <div class="folder-card-count"><span>${count}</span> elementos</div>
         </div>`;
     }).join('');
 }
@@ -358,7 +379,6 @@ function openAddModal() {
     $('#modalTitle').textContent = 'Agregar Producto';
     $('#productForm').reset();
     $('#editProductId').value = '';
-    $('#productCategoryHidden').value = currentFolderId ? (folders.find(f => f.id === currentFolderId)?.name || '') : '';
     $('#imageUploadArea').classList.remove('has-image');
     $('#imagePreview').src = '';
     openModal($('#modalOverlay'));
@@ -372,7 +392,6 @@ function openEditModal(id) {
     $('#productDescription').value = product.description || '';
     $('#productStock').value = product.stock;
     $('#editProductId').value = product.id;
-    $('#productCategoryHidden').value = product.category || '';
     if (product.image) { $('#imagePreview').src = product.image; $('#imageUploadArea').classList.add('has-image'); }
     else { $('#imageUploadArea').classList.remove('has-image'); $('#imagePreview').src = ''; }
     openModal($('#modalOverlay'));
@@ -410,7 +429,6 @@ async function handleFormSubmit(e) {
     const name = $('#productName').value.trim();
     const description = $('#productDescription').value.trim();
     const stock = parseInt($('#productStock').value) || 0;
-    const category = $('#productCategoryHidden').value;
     const image = $('#imagePreview').src || '';
 
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
@@ -418,12 +436,20 @@ async function handleFormSubmit(e) {
     if (editId) {
         const product = products.find(p => p.id === editId);
         if (product) {
-            const updated = { ...product, name, description, stock, category, image: image || product.image, updatedAt: new Date().toISOString() };
+            const updated = { ...product, name, description, stock, image: image || product.image, updatedAt: new Date().toISOString() };
             await saveProductToCloud(updated);
             showToast('Producto actualizado ✅', 'success');
         }
     } else {
-        const newProduct = { id: generateId(), name, description, stock, category, image: image || '', totalSold: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        const newProduct = { 
+            id: generateId(), 
+            folderId: currentFolderId, // Guardamos en la carpeta actual
+            name, description, stock, 
+            image: image || '', 
+            totalSold: 0, 
+            createdAt: new Date().toISOString(), 
+            updatedAt: new Date().toISOString() 
+        };
         await saveProductToCloud(newProduct);
         showToast('Producto agregado ✅', 'success');
     }
@@ -435,28 +461,25 @@ function renderProducts() {
     const empty = $('#emptyState');
     const filter = ($('#searchInput')?.value || '').trim().toLowerCase();
 
-    let filtered = products;
+    // Filtramos productos que pertenecen a la carpeta actual
+    let filtered = products.filter(p => p.folderId === currentFolderId);
 
-    // Filter by folder
-    if (currentFolderId) {
-        const folder = folders.find(f => f.id === currentFolderId);
-        if (folder) filtered = filtered.filter(p => p.category === folder.name);
-    }
-
-    // Filter by search
+    // Si hay búsqueda, buscamos en TODOS los productos para facilitar encontrar cosas
     if (filter) {
-        filtered = filtered.filter(p =>
+        filtered = products.filter(p =>
             p.name.toLowerCase().includes(filter) ||
             (p.description && p.description.toLowerCase().includes(filter))
         );
     }
 
-    if (filtered.length === 0) {
+    const folderHasContent = folders.some(f => f.parentId === currentFolderId) || filtered.length > 0;
+
+    if (!folderHasContent) {
         grid.innerHTML = '';
-        empty.classList.add('visible');
+        empty.style.display = 'block';
         return;
     }
-    empty.classList.remove('visible');
+    empty.style.display = 'none';
 
     grid.innerHTML = filtered.map((product, i) => {
         const stockClass = product.stock === 0 ? 'out-of-stock' : product.stock <= 10 ? 'low-stock' : '';
@@ -464,7 +487,6 @@ function renderProducts() {
         <div class="product-card" style="animation-delay:${i * 0.05}s">
             <div class="card-image-container">
                 ${product.image ? `<img src="${product.image}" alt="${escapeHtml(product.name)}" class="card-image">` : `<div class="card-no-image">📦</div>`}
-                ${product.category ? `<span class="card-category">${escapeHtml(product.category)}</span>` : ''}
             </div>
             <div class="card-body">
                 <h3 class="card-name">${escapeHtml(product.name)}</h3>
@@ -576,10 +598,14 @@ async function handleDeleteConfirm() {
 
 // ===== Stats =====
 function updateStats() {
-    animateNumber($('#totalProducts'), products.length);
-    animateNumber($('#totalStock'), products.reduce((s, p) => s + p.stock, 0));
-    animateNumber($('#lowStockCount'), products.filter(p => p.stock <= 10 && p.stock > 0).length);
-    animateNumber($('#totalCategories'), folders.length);
+    // Para las stats, mostramos lo que hay en la carpeta actual (o total si es raíz)
+    const localProducts = currentFolderId ? products.filter(p => p.folderId === currentFolderId) : products;
+    const localFolders = currentFolderId ? folders.filter(f => f.parentId === currentFolderId) : folders;
+
+    animateNumber($('#totalProducts'), localProducts.length);
+    animateNumber($('#totalStock'), localProducts.reduce((s, p) => s + p.stock, 0));
+    animateNumber($('#lowStockCount'), localProducts.filter(p => p.stock <= 10 && p.stock > 0).length);
+    animateNumber($('#totalCategories'), localFolders.length);
 }
 
 function animateNumber(el, target) {
@@ -616,11 +642,7 @@ function renderChart() {
     if (!canvas) return;
 
     // Get products for current view
-    let chartProducts = products;
-    if (currentFolderId) {
-        const folder = folders.find(f => f.id === currentFolderId);
-        if (folder) chartProducts = products.filter(p => p.category === folder.name);
-    }
+    let chartProducts = products.filter(p => p.folderId === currentFolderId);
 
     // Only show products with sales
     const withSales = chartProducts.filter(p => (p.totalSold || 0) > 0);
@@ -756,11 +778,7 @@ function toggleChart() {
 async function resetSales() {
     if (!confirm('¿Seguro que quieres reiniciar el reporte de ventas de esta carpeta? El stock no se verá afectado.')) return;
     
-    let toReset = products;
-    if (currentFolderId) {
-        const folder = folders.find(f => f.id === currentFolderId);
-        if (folder) toReset = products.filter(p => p.category === folder.name);
-    }
+    let toReset = products.filter(p => p.folderId === currentFolderId);
     
     for (const p of toReset) {
         await saveProductToCloud({ ...p, totalSold: 0 });
