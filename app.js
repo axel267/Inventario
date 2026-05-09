@@ -47,15 +47,54 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 // ===== Init =====
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🔌 Conectando con Firebase...');
-    await migrateToCloud();
-    loadData();
-    showFoldersView();
-    updateStats();
-    bindEvents();
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔌 Conectando con Firebase & Auth...');
+    
+    // Auth Listener
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (user) {
+            console.log('👤 Usuario autenticado:', user.email);
+            $('#loginOverlay').style.display = 'none';
+            await migrateToCloud();
+            loadData();
+            showFoldersView();
+            updateStats();
+            bindEvents();
+        } else {
+            console.log('🚪 No hay sesión activa');
+            $('#loginOverlay').style.display = 'flex';
+            bindLoginEvents();
+        }
+    });
+
     registerServiceWorker();
 });
+
+function bindLoginEvents() {
+    $('#loginForm').addEventListener('submit', handleLogin);
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const email = $('#loginEmail').value.trim();
+    const password = $('#loginPassword').value;
+    const errorEl = $('#loginError');
+    const btn = e.target.querySelector('button');
+
+    btn.disabled = true;
+    btn.textContent = 'Verificando...';
+    errorEl.textContent = '';
+
+    try {
+        await firebase.auth().signInWithEmailAndPassword(email, password);
+        showToast('¡Bienvenido de nuevo!', 'success');
+    } catch (err) {
+        console.error('Login error:', err);
+        errorEl.textContent = 'Correo o contraseña incorrectos.';
+        btn.disabled = false;
+        btn.textContent = 'Entrar al Inventario';
+    }
+}
 
 function loadData() {
     // Listen to Folders
@@ -187,6 +226,7 @@ function bindEvents() {
     // Chart toggle & reset
     $('#btnToggleChart').addEventListener('click', toggleChart);
     $('#btnResetSales').addEventListener('click', resetSales);
+    $('#btnLogout').addEventListener('click', () => firebase.auth().signOut());
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
