@@ -313,21 +313,30 @@ function openDeleteFolderModal(id) {
 async function handleDeleteFolderConfirm() {
     if (!currentDeleteFolderId) return;
     
-    // Recursive Delete
-    const foldersToDelete = getAllSubfolderIds(currentDeleteFolderId);
-    foldersToDelete.push(currentDeleteFolderId);
-    
-    for (const fid of foldersToDelete) {
-        // Delete products in this subfolder
-        const prods = products.filter(p => p.folderId === fid);
-        for (const p of prods) await deleteProductFromCloud(p.id);
-        // Delete folder
-        await deleteFolderFromCloud(fid);
+    try {
+        console.log('🗑️ Borrando carpeta:', currentDeleteFolderId);
+        // Recursive Delete
+        const foldersToDelete = getAllSubfolderIds(currentDeleteFolderId);
+        foldersToDelete.push(currentDeleteFolderId);
+        
+        for (const fid of foldersToDelete) {
+            // Delete products in this subfolder
+            const prods = products.filter(p => p.folderId === fid);
+            for (const p of prods) {
+                await db.collection('products').doc(p.id).delete();
+            }
+            // Delete folder
+            await db.collection('folders').doc(fid).delete();
+        }
+        
+        showToast('Carpeta y contenido eliminados', 'error');
+    } catch (err) {
+        console.error('Error al borrar carpeta:', err);
+        showToast('Error al borrar carpeta', 'error');
+    } finally {
+        currentDeleteFolderId = null;
+        closeModal($('#deleteFolderModalOverlay'));
     }
-    
-    currentDeleteFolderId = null;
-    closeModal($('#deleteFolderModalOverlay'));
-    showToast('Carpeta y contenido eliminados', 'error');
 }
 
 function getAllSubfolderIds(parentId) {
@@ -342,7 +351,11 @@ function getAllSubfolderIds(parentId) {
 
 function renderFolders() {
     const grid = $('#folderGrid');
-    const filtered = folders.filter(f => f.parentId === currentFolderId);
+    // Compatibilidad: Si parentId no existe, lo tratamos como null (raíz)
+    const filtered = folders.filter(f => {
+        const pid = f.parentId || null;
+        return pid === currentFolderId;
+    });
 
     if (filtered.length === 0) {
         grid.innerHTML = '';
@@ -453,8 +466,11 @@ function renderProducts() {
     const empty = $('#emptyState');
     const filter = ($('#searchInput')?.value || '').trim().toLowerCase();
 
-    // Filtramos productos que pertenecen a la carpeta actual
-    let filtered = products.filter(p => p.folderId === currentFolderId);
+    // Filtramos productos: si no tienen folderId y estamos en raíz, los mostramos
+    let filtered = products.filter(p => {
+        const fid = p.folderId || null;
+        return fid === currentFolderId;
+    });
 
     // Si hay búsqueda, buscamos en TODOS los productos para facilitar encontrar cosas
     if (filter) {
