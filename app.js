@@ -131,6 +131,9 @@ function renderCurrentFolder() {
     
     // Back button visibility
     $('#btnBack').style.display = currentFolderId ? 'flex' : 'none';
+    
+    // Opciones de carpeta actual
+    $('#currentFolderOptions').style.display = currentFolderId ? 'flex' : 'none';
 }
 
 function renderBreadcrumb() {
@@ -368,15 +371,24 @@ function renderFolders() {
         return `
         <div class="folder-card" style="--folder-color:${folder.color}; animation-delay:${i * 0.06}s"
              onclick="showFolder('${folder.id}')">
-            <div class="folder-card-actions">
-                <button class="folder-action-btn" onclick="event.stopPropagation(); openEditFolderModal('${folder.id}')" title="Editar">✏️</button>
-                <button class="folder-action-btn delete" onclick="event.stopPropagation(); openDeleteFolderModal('${folder.id}')" title="Eliminar">🗑️</button>
-            </div>
             <span class="folder-card-icon">${folder.icon}</span>
             <div class="folder-card-name">${escapeHtml(folder.name)}</div>
             <div class="folder-card-count"><span>${count}</span> elementos</div>
+            
+            <div class="folder-card-footer" onclick="event.stopPropagation()">
+                <button class="f-btn edit" onclick="openEditFolderModal('${folder.id}')">Editar</button>
+                <button class="f-btn delete" onclick="openDeleteFolderModal('${folder.id}')">Borrar</button>
+            </div>
         </div>`;
     }).join('');
+}
+
+function openEditCurrentFolder() {
+    if (currentFolderId) openEditFolderModal(currentFolderId);
+}
+
+function openDeleteCurrentFolder() {
+    if (currentFolderId) openDeleteFolderModal(currentFolderId);
 }
 
 // ===== PRODUCTS =====

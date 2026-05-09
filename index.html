@@ -120,6 +120,13 @@
 
         <!-- Content Grids -->
         <div id="folderGrid" class="folder-grid"></div>
+
+        <!-- Folder Options (Only visible when inside a folder) -->
+        <div id="currentFolderOptions" class="folder-options-bar" style="display:none;">
+            <button class="btn-text-action" onclick="openEditCurrentFolder()">✏️ Editar esta carpeta</button>
+            <button class="btn-text-action danger" onclick="openDeleteCurrentFolder()">🗑️ Eliminar esta carpeta</button>
+        </div>
+
         <div id="productGrid" class="product-grid"></div>
 
         <!-- Empty State -->
