@@ -92,6 +92,18 @@
                 <span class="btn-icon">➕</span>
                 Nuevo Producto
             </button>
+            <button class="btn-add btn-add-secondary" id="btnOpenDeliveryModal">
+                <span class="btn-icon">📦</span>
+                Nueva Entrega
+            </button>
+            <button class="btn-add btn-add-secondary" id="btnToggleSalesHistory">
+                <span class="btn-icon">📋</span>
+                Historial
+            </button>
+            <button class="btn-add btn-add-secondary" id="btnToggleDeliveries">
+                <span class="btn-icon">🚚</span>
+                Entregas
+            </button>
             <div class="search-container">
                 <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar...">
             </div>
@@ -114,6 +126,41 @@
                 <canvas id="salesChart" width="800" height="300"></canvas>
                 <div class="chart-empty" id="chartEmpty" style="display:none;">
                     <p>Aún no hay ventas registradas. Cuando quites stock de un producto, se registrará como venta aquí.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales History Panel -->
+        <div class="history-section" id="historySection" style="display:none;">
+            <div class="history-header">
+                <div class="chart-title-group">
+                    <span class="chart-icon">📋</span>
+                    <h3 class="chart-title">Historial de Ventas</h3>
+                </div>
+                <button class="chart-toggle" id="btnCloseHistory">✕</button>
+            </div>
+            <div class="history-body">
+                <div class="history-filters">
+                    <input type="text" id="historySearch" class="search-input history-search" placeholder="🔍 Buscar modelo...">
+                </div>
+                <div id="historyList" class="history-list">
+                    <p class="chart-empty">No hay ventas registradas aún.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deliveries Panel -->
+        <div class="deliveries-section" id="deliveriesSection" style="display:none;">
+            <div class="history-header">
+                <div class="chart-title-group">
+                    <span class="chart-icon">🚚</span>
+                    <h3 class="chart-title">Próximas Entregas</h3>
+                </div>
+                <button class="chart-toggle" id="btnCloseDeliveries">✕</button>
+            </div>
+            <div class="history-body">
+                <div id="deliveriesList" class="deliveries-list">
+                    <p class="chart-empty">No hay entregas programadas.</p>
                 </div>
             </div>
         </div>
@@ -297,6 +344,12 @@
                     <input type="number" id="stockSetDirect" class="form-input" placeholder="Ej: 200" min="0">
                     <button class="btn-set-stock" id="btnSetStock">Establecer</button>
                 </div>
+                <div class="lost-sale-section">
+                    <div class="lost-sale-divider"></div>
+                    <p class="lost-sale-label">¿Se acabó y alguien lo pidió?</p>
+                    <button class="btn-lost-sale" id="btnLostSale">💸 Registrar Venta Perdida</button>
+                    <p class="lost-sale-count" id="lostSaleCount">0 ventas perdidas</p>
+                </div>
             </div>
         </div>
     </div>
@@ -318,6 +371,71 @@
                     <button class="btn-cancel" id="btnCancelDelete">Cancelar</button>
                     <button class="btn-delete-confirm" id="btnConfirmDelete">Eliminar</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: Delivery Reminder                    -->
+    <!-- ============================================ -->
+    <div class="modal-overlay" id="deliveryModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Programar Entrega</h2>
+                <button class="modal-close" id="btnCloseDeliveryModal">&times;</button>
+            </div>
+            <form id="deliveryForm" class="modal-body">
+                <div class="form-group">
+                    <label for="deliveryModels">Modelos a entregar *</label>
+                    <input type="text" id="deliveryModels" class="form-input" placeholder="Ej: Crocs Classic + Crocs Echo" required>
+                </div>
+                <div class="form-group">
+                    <label for="deliveryClientName">Nombre del cliente *</label>
+                    <input type="text" id="deliveryClientName" class="form-input" placeholder="Ej: Juan Pérez" required>
+                </div>
+                <div class="form-group">
+                    <label for="deliveryClientPhone">Teléfono del cliente *</label>
+                    <input type="tel" id="deliveryClientPhone" class="form-input" placeholder="Ej: 5525501234" required>
+                </div>
+                <div class="form-group">
+                    <label for="deliveryDate">Fecha de entrega *</label>
+                    <input type="date" id="deliveryDate" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="deliveryTime">Hora de entrega *</label>
+                    <input type="time" id="deliveryTime" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="deliveryImage">Captura / Comprobante (opcional)</label>
+                    <div class="image-upload" id="deliveryImageUploadArea">
+                        <input type="file" id="deliveryImage" accept="image/*" hidden>
+                        <div class="upload-placeholder" id="deliveryUploadPlaceholder">
+                            <span class="upload-icon">📸</span>
+                            <span>Sube captura de pago o chat</span>
+                        </div>
+                        <img id="deliveryImagePreview" class="image-preview" alt="Vista previa">
+                    </div>
+                </div>
+                <input type="hidden" id="editDeliveryId" value="">
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="btnCancelDelivery">Cancelar</button>
+                    <button type="submit" class="btn-save">Guardar Entrega</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: Delivery Image Viewer                -->
+    <!-- ============================================ -->
+    <div class="modal-overlay" id="deliveryImageViewerOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Captura de Entrega</h2>
+                <button class="modal-close" id="btnCloseImageViewer">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center; padding:1rem;">
+                <img id="deliveryImageViewerImg" style="max-width:100%;border-radius:var(--radius-sm);" alt="Captura">
             </div>
         </div>
     </div>
