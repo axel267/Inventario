@@ -259,6 +259,27 @@ function bindEvents() {
     $('#btnToggleDeliveries').addEventListener('click', toggleDeliveriesPanel);
     $('#btnCloseDeliveries').addEventListener('click', () => $('#deliveriesSection').style.display = 'none');
 
+    // Restock Dashboard
+    $('#btnToggleDashboard').addEventListener('click', toggleDashboard);
+    $('#btnCloseDashboard').addEventListener('click', () => $('#dashboardSection').style.display = 'none');
+    $('#btnCalculateRestock').addEventListener('click', computeRestockRecommendations);
+    $$('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const days = parseInt(btn.dataset.days);
+            const to = new Date();
+            const from = new Date();
+            from.setDate(from.getDate() - days);
+            $('#dashFromDate').value = from.toISOString().split('T')[0];
+            $('#dashToDate').value = to.toISOString().split('T')[0];
+            $$('.preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            computeRestockRecommendations();
+        });
+    });
+    // Remove active from presets when user manually changes dates
+    $('#dashFromDate').addEventListener('change', () => $$('.preset-btn').forEach(b => b.classList.remove('active')));
+    $('#dashToDate').addEventListener('change', () => $$('.preset-btn').forEach(b => b.classList.remove('active')));
+
     // Delivery modal
     $('#btnOpenDeliveryModal').addEventListener('click', openDeliveryModal);
     $('#btnCloseDeliveryModal').addEventListener('click', () => closeModal($('#deliveryModalOverlay')));
@@ -1116,3 +1137,219 @@ async function quickLostSale(id) {
     showToast(`💸 Venta perdida: "${product.name}" (${lostSales} total)`, 'info');
 }
 
+
+// ===== FEATURE 4: Restock Dashboard =====
+function toggleDashboard() {
+    const section = $('#dashboardSection');
+    const isHidden = section.style.display === 'none';
+    section.style.display = isHidden ? 'block' : 'none';
+
+    if (isHidden) {
+        // Auto-populate last 30 days on first open if dates are empty
+        if (!$('#dashFromDate').value) {
+            const to = new Date();
+            const from = new Date();
+            from.setDate(from.getDate() - 30);
+            $('#dashFromDate').value = from.toISOString().split('T')[0];
+            $('#dashToDate').value = to.toISOString().split('T')[0];
+        }
+        // Scroll into view
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+async function computeRestockRecommendations() {
+    const fromVal = $('#dashFromDate').value;
+    const toVal = $('#dashToDate').value;
+
+    if (!fromVal || !toVal) {
+        showToast('Selecciona un rango de fechas', 'error');
+        return;
+    }
+
+    // Build date objects (local time)
+    const fromDate = new Date(fromVal + 'T00:00:00');
+    const toDate   = new Date(toVal   + 'T23:59:59');
+
+    if (fromDate >= toDate) {
+        showToast('La fecha inicio debe ser anterior a la fecha fin', 'error');
+        return;
+    }
+
+    const content = $('#dashboardContent');
+    content.innerHTML = '<div class="dash-loading"><span class="dash-spinner"></span> Calculando recomendaciones…</div>';
+
+    try {
+        // --- Query Firestore for sales in the selected range ---
+        const snapshot = await db.collection('sales_history')
+            .where('timestamp', '>=', fromDate.toISOString())
+            .where('timestamp', '<=', toDate.toISOString())
+            .get();
+
+        const salesInRange = snapshot.docs.map(doc => doc.data());
+
+        // Aggregate total sold per productId
+        const salesMap = {}; // { productId: totalQty }
+        for (const sale of salesInRange) {
+            salesMap[sale.productId] = (salesMap[sale.productId] || 0) + (sale.quantity || 1);
+        }
+
+        // Period length in days
+        const periodDays = Math.max(1, Math.round((toDate - fromDate) / (1000 * 60 * 60 * 24)));
+
+        // Build folder -> products map (only products inside a folder)
+        const folderProductsMap = {};
+        for (const product of products) {
+            const fid = product.folderId;
+            if (!fid) continue;
+            if (!folderProductsMap[fid]) folderProductsMap[fid] = [];
+            folderProductsMap[fid].push(product);
+        }
+
+        // Build recommendation objects per folder (model)
+        const recommendations = [];
+        for (const folder of folders) {
+            const folderProducts = folderProductsMap[folder.id] || [];
+            if (folderProducts.length === 0) continue;
+
+            const sizes = folderProducts.map(p => {
+                const soldInPeriod = salesMap[p.id] || 0;
+                // Projected need for next same-length period = same as sold
+                // Order = max(0, projectedNeed - currentStock)
+                const toOrder = Math.max(0, soldInPeriod - p.stock);
+                return {
+                    name:          p.name,
+                    currentStock:  p.stock,
+                    soldInPeriod,
+                    toOrder
+                };
+            });
+
+            // Only include folders that had at least 1 sale in the period
+            const hasSales = sizes.some(s => s.soldInPeriod > 0);
+            if (!hasSales) continue;
+
+            const totalToOrder = sizes.reduce((sum, s) => sum + s.toOrder, 0);
+
+            recommendations.push({ folder, sizes, totalToOrder });
+        }
+
+        // Sort: most urgent (highest totalToOrder) first
+        recommendations.sort((a, b) => b.totalToOrder - a.totalToOrder);
+
+        renderDashboard(recommendations, periodDays, fromDate, toDate);
+
+    } catch (err) {
+        console.error('Error computing restock recommendations:', err);
+        content.innerHTML = '<p class="chart-empty">❌ Error al calcular. Verifica tu conexión e intenta de nuevo.</p>';
+    }
+}
+
+function renderDashboard(recommendations, periodDays, fromDate, toDate) {
+    const content = $('#dashboardContent');
+
+    if (recommendations.length === 0) {
+        content.innerHTML = '<p class="chart-empty">No se encontraron ventas en este período. Prueba con un rango de fechas más amplio.</p>';
+        return;
+    }
+
+    const totalPairs    = recommendations.reduce((s, r) => s + r.totalToOrder, 0);
+    const modelsToOrder = recommendations.filter(r => r.totalToOrder > 0).length;
+    const totalModels   = recommendations.length;
+
+    const fmtDate = d => d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    content.innerHTML = `
+        <div class="dash-summary">
+            <div class="dash-stat">
+                <span class="dash-stat-icon">📅</span>
+                <span class="dash-stat-value">${periodDays}</span>
+                <span class="dash-stat-label">Días analizados</span>
+            </div>
+            <div class="dash-stat">
+                <span class="dash-stat-icon">📂</span>
+                <span class="dash-stat-value">${totalModels}</span>
+                <span class="dash-stat-label">Modelos con ventas</span>
+            </div>
+            <div class="dash-stat warn">
+                <span class="dash-stat-icon">⚠️</span>
+                <span class="dash-stat-value">${modelsToOrder}</span>
+                <span class="dash-stat-label">Modelos a reabastecer</span>
+            </div>
+            <div class="dash-stat highlight">
+                <span class="dash-stat-icon">📦</span>
+                <span class="dash-stat-value">${totalPairs}</span>
+                <span class="dash-stat-label">Pares totales a pedir</span>
+            </div>
+        </div>
+        <p class="dash-period-note">
+            📅 Análisis del <strong>${fmtDate(fromDate)}</strong> al <strong>${fmtDate(toDate)}</strong>
+            &nbsp;·&nbsp; Proyección: pedir suficiente para cubrir los próximos <strong>${periodDays} días</strong>
+        </p>
+        <div class="restock-cards-grid">
+            ${recommendations.map(renderRestockCard).join('')}
+        </div>
+    `;
+}
+
+function renderRestockCard(rec) {
+    const { folder, sizes, totalToOrder } = rec;
+
+    // Sort sizes: those needing reorder first, then by qty desc
+    const sorted = [...sizes].sort((a, b) => b.toOrder - a.toOrder || b.soldInPeriod - a.soldInPeriod);
+
+    const cardClass = totalToOrder === 0 ? 'card-ok'
+                    : totalToOrder <= 4  ? 'card-medium'
+                    : 'card-urgent';
+
+    const badge = totalToOrder > 0
+        ? `<span class="restock-badge badge-warn">⚡ ${totalToOrder} par${totalToOrder !== 1 ? 'es' : ''} a pedir</span>`
+        : `<span class="restock-badge badge-ok">✅ Stock suficiente</span>`;
+
+    const rows = sorted.map(s => {
+        const rowClass = s.toOrder === 0   ? 'row-ok'
+                       : s.toOrder <= 2    ? 'row-medium'
+                       : 'row-urgent';
+        const orderCell = s.toOrder > 0
+            ? `<span class="order-pill ${s.toOrder >= 5 ? 'pill-red' : 'pill-yellow'}"><strong>${s.toOrder}</strong> pares</span>`
+            : `<span class="order-pill pill-green">—</span>`;
+        return `
+            <div class="restock-row ${rowClass}">
+                <span class="restock-size-name">${escapeHtml(s.name)}</span>
+                <span class="restock-cell">${s.soldInPeriod} pz</span>
+                <span class="restock-cell">${s.currentStock} pz</span>
+                <span class="restock-cell">${orderCell}</span>
+            </div>`;
+    }).join('');
+
+    // Plain-text summary for quick reading
+    const orderList = sorted
+        .filter(s => s.toOrder > 0)
+        .map(s => `${s.toOrder} × ${s.name}`)
+        .join(', ');
+
+    const summary = orderList
+        ? `<div class="restock-summary-text">🗒️ Pedir: ${orderList}</div>`
+        : '';
+
+    return `
+        <div class="restock-card ${cardClass}">
+            <div class="restock-card-header">
+                <span class="restock-folder-icon">${folder.icon || '📦'}</span>
+                <div class="restock-folder-meta">
+                    <span class="restock-folder-name">${escapeHtml(folder.name)}</span>
+                    ${badge}
+                </div>
+            </div>
+            ${summary}
+            <div class="restock-table">
+                <div class="restock-row restock-row-header">
+                    <span>Talla / Modelo</span>
+                    <span>Vendidos</span>
+                    <span>Stock actual</span>
+                    <span>Pedir</span>
+                </div>
+                ${rows}
+            </div>
+        </div>`;
+}

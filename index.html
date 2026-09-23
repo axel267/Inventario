@@ -104,6 +104,10 @@
                 <span class="btn-icon">🚚</span>
                 Entregas
             </button>
+            <button class="btn-add btn-add-secondary btn-restock" id="btnToggleDashboard">
+                <span class="btn-icon">📈</span>
+                Restock
+            </button>
             <div class="search-container">
                 <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar...">
             </div>
@@ -161,6 +165,47 @@
             <div class="history-body">
                 <div id="deliveriesList" class="deliveries-list">
                     <p class="chart-empty">No hay entregas programadas.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Analytics: Restock Dashboard                 -->
+        <!-- ============================================ -->
+        <div class="dashboard-section" id="dashboardSection" style="display:none;">
+            <div class="dashboard-header">
+                <div class="chart-title-group">
+                    <span class="chart-icon">📈</span>
+                    <h3 class="chart-title">Reabastecimiento Inteligente</h3>
+                </div>
+                <button class="chart-toggle" id="btnCloseDashboard">✕</button>
+            </div>
+            <div class="dashboard-body">
+                <!-- Period Selector -->
+                <div class="dashboard-controls">
+                    <div class="period-presets">
+                        <button class="preset-btn" data-days="7">7 días</button>
+                        <button class="preset-btn" data-days="14">14 días</button>
+                        <button class="preset-btn active" data-days="30">30 días</button>
+                        <button class="preset-btn" data-days="60">60 días</button>
+                        <button class="preset-btn" data-days="90">90 días</button>
+                    </div>
+                    <div class="period-custom-row">
+                        <div class="period-input-group">
+                            <label for="dashFromDate">Desde</label>
+                            <input type="date" id="dashFromDate" class="period-date-input">
+                        </div>
+                        <span class="period-arrow">→</span>
+                        <div class="period-input-group">
+                            <label for="dashToDate">Hasta</label>
+                            <input type="date" id="dashToDate" class="period-date-input">
+                        </div>
+                        <button class="btn-calculate" id="btnCalculateRestock">🔍 Calcular</button>
+                    </div>
+                </div>
+                <!-- Results -->
+                <div id="dashboardContent" class="dashboard-content">
+                    <p class="chart-empty">Selecciona un período y presiona <strong>Calcular</strong> para ver las recomendaciones de pedido.</p>
                 </div>
             </div>
         </div>
