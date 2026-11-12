@@ -48,6 +48,9 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 // ===== Init =====
+let _eventsbound = false;
+let _loginBound = false;
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🔌 Conectando con Firebase & Auth...');
     
@@ -60,14 +63,15 @@ document.addEventListener('DOMContentLoaded', () => {
             loadData();
             showFolder(null);
             updateStats();
-            bindEvents();
+            if (!_eventsbound) { bindEvents(); _eventsbound = true; }
             requestNotificationPermission();
             setInterval(checkDeliveryReminders, 60000);
             checkDeliveryReminders();
         } else {
             console.log('🚪 No hay sesión activa');
+            _eventsbound = false;
             $('#loginOverlay').style.display = 'flex';
-            bindLoginEvents();
+            if (!_loginBound) { bindLoginEvents(); _loginBound = true; }
         }
     });
 
@@ -1009,7 +1013,8 @@ async function deleteSaleEntry(docId, productId, quantity) {
     }
 }
 
-// ===== FEATURE 2: Delivery Reminders =====function openDeliveryModal() {
+// ===== FEATURE 2: Delivery Reminders =====
+function openDeliveryModal() {
     $('#deliveryForm').reset();
     $('#editDeliveryId').value = '';
     $('#deliveryImageUploadArea').classList.remove('has-image');
