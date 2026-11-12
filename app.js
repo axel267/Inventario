@@ -304,6 +304,17 @@ function bindEvents() {
     // Lost Sales
     $('#btnLostSale').addEventListener('click', handleLostSale);
 
+    // Analytics panel
+    $('#btnToggleAnalytics').addEventListener('click', toggleAnalytics);
+    $('#btnCloseAnalytics').addEventListener('click', () => { $('#analyticsSection').style.display = 'none'; });
+    $$('.analytics-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            $$('.analytics-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderAnalyticsTab(tab.dataset.tab);
+        });
+    });
+
     // Close overlays on click outside / Escape
     ['modalOverlay', 'stockModalOverlay', 'deleteModalOverlay', 'folderModalOverlay', 'deleteFolderModalOverlay', 'deliveryModalOverlay', 'deliveryImageViewerOverlay'].forEach(id => {
         const el = $('#' + id);
@@ -480,6 +491,7 @@ function openEditModal(id) {
     $('#productName').value = product.name;
     $('#productDescription').value = product.description || '';
     $('#productStock').value = product.stock;
+    $('#productPrice').value = product.price || 0;
     $('#editProductId').value = product.id;
     if (product.image) { $('#imagePreview').src = product.image; $('#imageUploadArea').classList.add('has-image'); }
     else { $('#imageUploadArea').classList.remove('has-image'); $('#imagePreview').src = ''; }
@@ -518,6 +530,7 @@ async function handleFormSubmit(e) {
     const name = $('#productName').value.trim();
     const description = $('#productDescription').value.trim();
     const stock = parseInt($('#productStock').value) || 0;
+    const price = parseFloat($('#productPrice').value) || 0;
     const image = $('#imagePreview').src || '';
 
     if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
@@ -525,15 +538,15 @@ async function handleFormSubmit(e) {
     if (editId) {
         const product = products.find(p => p.id === editId);
         if (product) {
-            const updated = { ...product, name, description, stock, image: image || product.image, updatedAt: new Date().toISOString() };
+            const updated = { ...product, name, description, stock, price, image: image || product.image, updatedAt: new Date().toISOString() };
             await saveProductToCloud(updated);
             showToast('Producto actualizado ✅', 'success');
         }
     } else {
         const newProduct = { 
             id: generateId(), 
-            folderId: currentFolderId, // Guardamos en la carpeta actual
-            name, description, stock, 
+            folderId: currentFolderId,
+            name, description, stock, price,
             image: image || '', 
             totalSold: 0, 
             createdAt: new Date().toISOString(), 
@@ -585,6 +598,7 @@ function renderProducts() {
             <div class="card-body">
                 <h3 class="card-name">${escapeHtml(product.name)}</h3>
                 ${product.description ? `<p class="card-description">${escapeHtml(product.description)}</p>` : ''}
+                ${product.price > 0 ? `<span class="card-price">$${product.price.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>` : ''}
             </div>
             <div class="card-stock-section">
                 <div class="stock-info">
@@ -616,6 +630,7 @@ function openStockModal(id) {
     $('#stockAdjustInput').value = 1;
     $('#stockSetDirect').value = '';
     $('#lostSaleCount').textContent = `${product.lostSales || 0} ventas perdidas`;
+    renderSizeShortcuts(product);
     openModal($('#stockModalOverlay'));
 }
 
@@ -708,6 +723,10 @@ function updateStats() {
     animateNumber($('#totalStock'), localProducts.reduce((s, p) => s + p.stock, 0));
     animateNumber($('#lowStockCount'), localProducts.filter(p => p.stock <= 10 && p.stock > 0).length);
     animateNumber($('#totalCategories'), localFolders.length);
+
+    const totalValue = localProducts.reduce((s, p) => s + ((p.price || 0) * p.stock), 0);
+    const valEl = $('#totalValue');
+    if (valEl) valEl.textContent = '$' + totalValue.toLocaleString('es-MX', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
 
 function animateNumber(el, target) {
@@ -950,6 +969,7 @@ function renderSalesHistory() {
                 <span class="history-cell">Modelo</span>
                 <span class="history-cell">Cantidad</span>
                 <span class="history-cell">Fecha</span>
+                <span class="history-cell"></span>
             </div>
             ${filtered.map(sale => {
                 const d = new Date(sale.timestamp);
@@ -960,13 +980,36 @@ function renderSalesHistory() {
                     <span class="history-cell history-model">${escapeHtml(sale.productName)}</span>
                     <span class="history-cell history-qty">-${sale.quantity} pz</span>
                     <span class="history-cell history-date">${dateStr} ${timeStr}</span>
+                    <button class="history-delete-btn" onclick="deleteSaleEntry('${sale.docId}', '${sale.productId}', ${sale.quantity})" title="Deshacer esta venta">🗑️</button>
                 </div>`;
             }).join('')}
         </div>`;
 }
 
-// ===== FEATURE 2: Delivery Reminders =====
-function openDeliveryModal() {
+// ===== DELETE SALE ENTRY =====
+async function deleteSaleEntry(docId, productId, quantity) {
+    if (!confirm(`¿Deshacer esta venta de ${quantity} pz? Se devolverá al stock del producto.`)) return;
+    try {
+        // 1. Borrar el doc del historial
+        await db.collection('sales_history').doc(docId).delete();
+
+        // 2. Buscar el producto y actualizar stock y totalSold
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            const newStock = product.stock + quantity;
+            const newTotalSold = Math.max(0, (product.totalSold || 0) - quantity);
+            await saveProductToCloud({ ...product, stock: newStock, totalSold: newTotalSold, updatedAt: new Date().toISOString() });
+            showToast(`✅ Venta deshecha: +${quantity} pz devueltas a "${product.name}"`, 'success');
+        } else {
+            showToast('✅ Entrada del historial eliminada', 'success');
+        }
+    } catch (err) {
+        console.error('Error al deshacer venta:', err);
+        showToast('❌ Error al deshacer la venta', 'error');
+    }
+}
+
+// ===== FEATURE 2: Delivery Reminders =====function openDeliveryModal() {
     $('#deliveryForm').reset();
     $('#editDeliveryId').value = '';
     $('#deliveryImageUploadArea').classList.remove('has-image');
@@ -1352,4 +1395,217 @@ function renderRestockCard(rec) {
                 ${rows}
             </div>
         </div>`;
+}
+
+
+// ===== FEATURE: Size Shortcuts =====
+function renderSizeShortcuts(product) {
+    const grid = $('#sizeShortcutsGrid');
+    const section = $('#sizeShortcuts');
+    if (!grid || !section) return;
+
+    const siblings = products.filter(p => p.folderId === product.folderId);
+    if (siblings.length <= 1) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    grid.innerHTML = siblings.map(p => {
+        const isActive = p.id === product.id;
+        const sizeMatch = p.name.match(/(\d+[\.\d]*)\s*$/);
+        const label = sizeMatch ? sizeMatch[1] : p.name.substring(0, 6);
+        const dotClass = p.stock <= 0 ? 'dot-empty' : p.stock <= 3 ? 'dot-low' : 'dot-ok';
+        const disabled = p.stock <= 0 ? 'disabled' : '';
+        return `<button class="size-shortcut-btn ${isActive ? 'active' : ''} ${p.stock <= 0 ? 'size-empty' : ''}"
+            onclick="quickSellSize('${p.id}')"
+            title="${escapeHtml(p.name)} — ${p.stock} pz"
+            ${disabled}>
+            ${label}
+            <span class="size-stock-dot ${dotClass}"></span>
+        </button>`;
+    }).join('');
+}
+
+async function quickSellSize(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    if (product.stock <= 0) { showToast(`💀 Sin stock: "${product.name}"`, 'error'); return; }
+
+    const newStock = product.stock - 1;
+    const totalSold = (product.totalSold || 0) + 1;
+    await saveProductToCloud({ ...product, stock: newStock, totalSold, updatedAt: new Date().toISOString() });
+    logSale(product.id, product.name, 1);
+    showToast(`💀 Vendido: ${product.name} → ${newStock} pz`, 'success');
+
+    if (product.id === currentStockProductId) {
+        $('#stockCurrentValue').textContent = newStock;
+    }
+    // Refresh shortcuts with updated product
+    const refreshTarget = products.find(p => p.id === currentStockProductId);
+    if (refreshTarget) renderSizeShortcuts(refreshTarget);
+}
+
+// ===== FEATURE: Analytics Panel =====
+function toggleAnalytics() {
+    const section = $('#analyticsSection');
+    const isHidden = section.style.display === 'none';
+    section.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        renderAnalyticsTab('daily');
+    }
+}
+
+function renderAnalyticsTab(tab) {
+    if (tab === 'daily') renderDailySalesTab();
+    else if (tab === 'sizes') renderTopSizesTab();
+    else if (tab === 'monthly') renderMonthlySummaryTab();
+}
+
+function renderDailySalesTab() {
+    const content = $('#analyticsContent');
+    if (!content) return;
+
+    const now = new Date();
+    const dayMap = {};
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        dayMap[d.toISOString().split('T')[0]] = 0;
+    }
+
+    salesHistory.forEach(sale => {
+        const key = sale.timestamp ? sale.timestamp.split('T')[0] : null;
+        if (key && dayMap.hasOwnProperty(key)) {
+            dayMap[key] += (sale.quantity || 1);
+        }
+    });
+
+    const days = Object.entries(dayMap);
+    const maxVal = Math.max(...days.map(d => d[1]), 1);
+    const totalThirty = days.reduce((s, d) => s + d[1], 0);
+    const avgDay = (totalThirty / 30).toFixed(1);
+    const bestDay = days.reduce((a, b) => a[1] >= b[1] ? a : b);
+    const todayKey = now.toISOString().split('T')[0];
+
+    content.innerHTML = `
+        <div class="analytics-summary">
+            <div class="analytics-stat">
+                <span class="analytics-stat-value">${totalThirty}</span>
+                <span class="analytics-stat-label">Vendidas (30d)</span>
+            </div>
+            <div class="analytics-stat">
+                <span class="analytics-stat-value">${avgDay}</span>
+                <span class="analytics-stat-label">Promedio/día</span>
+            </div>
+            <div class="analytics-stat highlight">
+                <span class="analytics-stat-value">${bestDay[1]}</span>
+                <span class="analytics-stat-label">🔥 Mejor día<br><small>${new Date(bestDay[0]+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short'})}</small></span>
+            </div>
+        </div>
+        <div class="daily-chart-wrap">
+            ${days.map(([date, qty]) => {
+                const h = maxVal > 0 ? Math.round((qty / maxVal) * 100) : 0;
+                const d = new Date(date + 'T12:00:00');
+                const isToday = date === todayKey;
+                return `<div class="day-bar-wrap" title="${d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'})}: ${qty} pz">
+                    <div class="day-bar ${isToday ? 'today' : ''}" style="height:${Math.max(h, qty > 0 ? 4 : 0)}%">
+                        ${qty > 0 ? `<span class="day-bar-val">${qty}</span>` : ''}
+                    </div>
+                    <span class="day-bar-label">${d.getDate()}</span>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderTopSizesTab() {
+    const content = $('#analyticsContent');
+    if (!content) return;
+
+    const sorted = [...products]
+        .filter(p => (p.totalSold || 0) > 0)
+        .sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0))
+        .slice(0, 20);
+
+    if (sorted.length === 0) {
+        content.innerHTML = '<p class="chart-empty">Aún no hay ventas registradas.</p>';
+        return;
+    }
+
+    const maxSold = sorted[0].totalSold || 1;
+    const totalAll = sorted.reduce((s, p) => s + (p.totalSold || 0), 0);
+    const medals = ['🥇','🥈','🥉'];
+
+    content.innerHTML = `
+        <p class="analytics-note">Top tallas/modelos más vendidos (histórico total)</p>
+        <div class="top-sizes-list">
+            ${sorted.map((p, i) => {
+                const pct = Math.round(((p.totalSold || 0) / maxSold) * 100);
+                const share = ((p.totalSold || 0) / totalAll * 100).toFixed(1);
+                return `<div class="top-size-row">
+                    <span class="top-size-rank">${medals[i] || (i+1)}</span>
+                    <div class="top-size-info">
+                        <span class="top-size-name">${escapeHtml(p.name)}</span>
+                        <div class="top-size-bar-wrap">
+                            <div class="top-size-bar" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                    <div class="top-size-nums">
+                        <span class="top-size-sold">${p.totalSold} pz</span>
+                        <span class="top-size-share">${share}%</span>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderMonthlySummaryTab() {
+    const content = $('#analyticsContent');
+    if (!content) return;
+
+    const monthMap = {};
+    salesHistory.forEach(sale => {
+        if (!sale.timestamp) return;
+        const d = new Date(sale.timestamp);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        if (!monthMap[key]) monthMap[key] = { qty: 0, revenue: 0 };
+        monthMap[key].qty += (sale.quantity || 1);
+        const prod = products.find(p => p.id === sale.productId);
+        const price = prod ? (prod.price || 0) : 0;
+        monthMap[key].revenue += price * (sale.quantity || 1);
+    });
+
+    const months = Object.entries(monthMap).sort((a,b) => b[0].localeCompare(a[0])).slice(0, 12);
+
+    if (months.length === 0) {
+        content.innerHTML = '<p class="chart-empty">Aún no hay ventas registradas.</p>';
+        return;
+    }
+
+    content.innerHTML = `
+        <p class="analytics-note">Resumen mensual de ventas (últimos 12 meses)</p>
+        <div class="monthly-table">
+            <div class="monthly-row monthly-header">
+                <span>Mes</span>
+                <span>Piezas</span>
+                <span>Ingresos</span>
+            </div>
+            ${months.map(([key, data]) => {
+                const [year, month] = key.split('-');
+                const d = new Date(parseInt(year), parseInt(month)-1, 1);
+                const label = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+                const revenue = data.revenue > 0
+                    ? '$' + data.revenue.toLocaleString('es-MX', {minimumFractionDigits:0})
+                    : '—';
+                return `<div class="monthly-row">
+                    <span class="monthly-month">${label}</span>
+                    <span class="monthly-qty">${data.qty} pz</span>
+                    <span class="monthly-rev">${revenue}</span>
+                </div>`;
+            }).join('')}
+        </div>
+    `;
 }
