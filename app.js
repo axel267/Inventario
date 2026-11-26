@@ -453,19 +453,44 @@ function renderFolders() {
     }
 
     grid.innerHTML = filtered.map((folder, i) => {
-        const count = folders.filter(f => f.parentId === folder.id).length + 
+        const count = folders.filter(f => f.parentId === folder.id).length +
                       products.filter(p => p.folderId === folder.id).length;
+        const theme = typeof getFolderTheme === 'function' ? getFolderTheme(folder.name) : null;
+        const themeId = theme ? theme.id : 'default';
+        const artHtml = theme ? `
+            <div class="folder-art-col" aria-hidden="true">
+                <img src="${theme.image}" alt="${escapeHtml(folder.name)}" class="folder-theme-png"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="folder-fallback-svg" style="display:none;">${theme.fallbackSvg}</div>
+            </div>` : `<span class="folder-card-icon">${folder.icon}</span>`;
+
         return `
-        <div class="folder-card" style="--folder-color:${folder.color}; animation-delay:${i * 0.06}s"
+        <div class="folder-card theme-${themeId}" style="--folder-color:${folder.color}; animation-delay:${i * 0.06}s"
              onclick="showFolder('${folder.id}')">
-            <span class="folder-card-icon">${folder.icon}</span>
-            <div class="folder-card-name">${escapeHtml(folder.name)}</div>
-            <div class="folder-card-count"><span>${count}</span> elementos</div>
-            
-            <div class="folder-card-footer" onclick="event.stopPropagation()">
-                <button class="f-btn edit" onclick="openEditFolderModal('${folder.id}')">Editar</button>
-                <button class="f-btn delete" onclick="openDeleteFolderModal('${folder.id}')">Borrar</button>
+            <div class="folder-card-hazard-top" aria-hidden="true"></div>
+            <div class="folder-corner-gadget" aria-hidden="true">${theme ? theme.cornerGadget : ''}</div>
+            <div class="folder-card-layout">
+                ${artHtml}
+                <div class="folder-info-col">
+                    <div class="folder-title-row">
+                        ${theme ? theme.titleLeftDeco : ''}
+                        <div class="folder-card-name">${escapeHtml(folder.name)}</div>
+                        ${theme ? theme.titleRightDeco : ''}
+                    </div>
+                    <div class="folder-card-count"><span>${count}</span> elementos</div>
+                    <div class="folder-card-footer" onclick="event.stopPropagation()">
+                        <button class="f-btn edit" onclick="openEditFolderModal('${folder.id}')">
+                            ${theme ? theme.editIcon : ''}
+                            <span>Editar</span>
+                        </button>
+                        <button class="f-btn delete ${theme && theme.hasBurst ? 'has-burst' : ''}" onclick="openDeleteFolderModal('${folder.id}')">
+                            ${theme ? theme.deleteIcon : ''}
+                            <span>Borrar</span>
+                        </button>
+                    </div>
+                </div>
             </div>
+            <div class="folder-slime-drip" aria-hidden="true"></div>
         </div>`;
     }).join('');
 }

@@ -7,7 +7,7 @@
     <title>Skibidi Stock</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Chakra+Petch:wght@600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Black+Ops+One&family=Chakra+Petch:wght@600;700&family=Inter:wght@300;400;500;600;700;800&family=Pacifico&family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#14191e">
@@ -390,8 +390,22 @@
             <div class="chart-body" id="chartBody">
                 <div class="chart-summary" id="chartSummary"></div>
                 <canvas id="salesChart" width="800" height="300"></canvas>
-                <div class="chart-empty" id="chartEmpty" style="display:none;">
+                <div class="chart-empty cracked-screen-box" id="chartEmpty" style="display:none;">
+                    <svg class="cracked-glass-svg" viewBox="0 0 120 80" fill="none" aria-hidden="true">
+                        <path d="M22 52L4 34M22 52L0 58M22 52L14 80M22 52L46 74M22 52L58 46M22 52L34 22" stroke="rgba(226,232,240,0.42)" stroke-width="1.4" stroke-linecap="round"/>
+                        <path d="M38 66L52 80M44 50L70 36" stroke="rgba(226,232,240,0.25)" stroke-width="1" stroke-linecap="round"/>
+                        <polygon points="18,48 26,49 24,56 17,54" fill="rgba(4,8,12,0.85)" stroke="rgba(226,232,240,0.45)" stroke-width="1"/>
+                    </svg>
                     <p>Aún no hay ventas registradas. Cuando quites stock de un producto, se registrará como venta aquí.</p>
+                    <div class="comic-bubble-wrap" aria-hidden="true">
+                        <span class="comic-speech-bubble">DOP DOP<br>YES YES!</span>
+                        <svg class="mini-toilet-svg" viewBox="0 0 42 46" fill="none">
+                            <rect x="24" y="4" width="12" height="18" rx="2.5" fill="#e2e8f0" stroke="#1e293b" stroke-width="2"/>
+                            <path d="M6 22H32C32 32 25 36 19 36C12 36 6 32 6 22Z" fill="#f8fafc" stroke="#1e293b" stroke-width="2"/>
+                            <ellipse cx="19" cy="22" rx="13" ry="3.2" fill="#cbd5e1" stroke="#1e293b" stroke-width="1.8"/>
+                            <path d="M12 35H26L28 43H10L12 35Z" fill="#cbd5e1" stroke="#1e293b" stroke-width="2"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
@@ -778,6 +792,7 @@
         </div>
     </div>
 
+    <script src="folderThemes.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
