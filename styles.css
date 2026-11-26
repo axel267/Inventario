@@ -2423,16 +2423,17 @@ body::after {
 }
 
 /* ==========================================================================
-   TEMA 2: MAIKRA (Pixel / Minecraft Green Grid)
+   TEMA 2: MAIKRA (Pixel / Minecraft Green Grid — Fixed Rivets!)
    ========================================================================== */
 .folder-card.theme-maikra {
     background:
         var(--rivets-4),
-        linear-gradient(90deg, rgba(74, 222, 128, 0.08) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(74, 222, 128, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74, 222, 128, 0.09) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(74, 222, 128, 0.09) 1px, transparent 1px),
         radial-gradient(ellipse at 35% 50%, rgba(34, 197, 94, 0.34) 0%, transparent 58%),
         linear-gradient(180deg, #16301b 0%, #0f2414 55%, #09170d 100%);
-    background-size: auto, 18px 18px, 18px 18px, auto, auto;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 18px 18px, 18px 18px, 100% 100%, 100% 100%;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat, no-repeat;
     border-color: #6b7680;
     box-shadow:
         inset 0 0 26px rgba(74, 222, 128, 0.24),
@@ -2608,3 +2609,325 @@ body::after {
         height: 38px;
     }
 }
+
+
+/* ==========================================================================
+   TEMAS ADICIONALES DE PERSONAJES (BATMAN, SPIDER-MAN, SHREK, STITCH, ETC.)
+   ========================================================================== */
+
+/* BATMAN — Gotham Negro / Amarillo Bat-Señal */
+.folder-card.theme-batman {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 78% 20%, rgba(250, 204, 21, 0.28) 0%, transparent 50%),
+        linear-gradient(180deg, #1b1f26 0%, #101318 55%, #080a0d 100%);
+    border-color: #eab308;
+    box-shadow: inset 0 0 26px rgba(250, 204, 21, 0.16), 0 0 0 2px #000, 0 0 22px rgba(250, 204, 21, 0.24), 0 10px 24px rgba(0, 0, 0, 0.85);
+}
+.folder-card.theme-batman .folder-card-hazard-top { opacity: 0.95; background: var(--hazard-stripes); border: 1px solid #000; }
+.folder-card.theme-batman .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.9rem, 5.8vw, 2.5rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #facc15;
+    -webkit-text-stroke: 1.5px #000;
+    text-shadow: 0 3px 0 #000, 0 0 14px rgba(250, 204, 21, 0.65);
+}
+.folder-card.theme-batman .folder-card-count,
+.folder-card.theme-batman .folder-card-count span { color: #fde047; }
+
+/* SPIDER-MAN — Rojo / Azul Telaraña */
+.folder-card.theme-spiderman {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 25% 45%, rgba(220, 38, 38, 0.42) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(37, 99, 235, 0.38) 0%, transparent 55%),
+        linear-gradient(180deg, #35141c 0%, #1c162e 55%, #0f1122 100%);
+    border-color: #ef4444;
+    box-shadow: inset 0 0 26px rgba(220, 38, 38, 0.22), 0 0 0 2px #0f172a, 0 0 22px rgba(239, 68, 68, 0.28), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-spiderman .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.85rem, 5.6vw, 2.45rem);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, #ffffff 0%, #fca5a5 40%, #ef4444 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    -webkit-text-stroke: 1.4px #0f172a;
+    filter: drop-shadow(0 3px 0 #0f172a) drop-shadow(0 0 12px rgba(59, 130, 246, 0.55));
+}
+.folder-card.theme-spiderman .folder-card-count,
+.folder-card.theme-spiderman .folder-card-count span { color: #93c5fd; }
+
+/* SHREK — Verde Pantano / Madera */
+.folder-card.theme-shrek {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 45%, rgba(132, 204, 22, 0.36) 0%, transparent 55%),
+        linear-gradient(180deg, #2d3816 0%, #1e260f 55%, #13180a 100%);
+    border-color: #84cc16;
+    box-shadow: inset 0 0 24px rgba(132, 204, 22, 0.22), 0 0 0 2px #1a2e05, 0 0 20px rgba(132, 204, 22, 0.25), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-shrek .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.9rem, 5.8vw, 2.5rem);
+    letter-spacing: 0.06em;
+    color: #bef264;
+    -webkit-text-stroke: 1.4px #1a2e05;
+    text-shadow: 0 3px 0 #1a2e05, 0 0 14px rgba(132, 204, 22, 0.65);
+}
+.folder-card.theme-shrek .folder-card-count,
+.folder-card.theme-shrek .folder-card-count span { color: #d9f99d; }
+
+/* STITCH — Azul Tropical / Rosa Flor */
+.folder-card.theme-stitch {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 40%, rgba(59, 130, 246, 0.42) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(244, 114, 182, 0.28) 0%, transparent 50%),
+        linear-gradient(180deg, #122b52 0%, #0d1f3d 55%, #081326 100%);
+    border-color: #60a5fa;
+    box-shadow: inset 0 0 26px rgba(59, 130, 246, 0.25), 0 0 0 2px #0c1e4a, 0 0 22px rgba(59, 130, 246, 0.3), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-stitch .folder-card-name {
+    font-family: 'Pacifico', cursive;
+    font-size: clamp(1.8rem, 5.5vw, 2.35rem);
+    color: #bae6fd;
+    -webkit-text-stroke: 1px #1d4ed8;
+    text-shadow: 0 2px 0 #1e3a8a, 0 0 14px rgba(96, 165, 250, 0.85);
+}
+.folder-card.theme-stitch .folder-card-count,
+.folder-card.theme-stitch .folder-card-count span { color: #93c5fd; }
+
+/* HELLO KITTY / SANRIO — Blanco / Rosa Pastel / Moño Rojo */
+.folder-card.theme-kitty {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 40% 40%, rgba(244, 114, 182, 0.38) 0%, transparent 58%),
+        radial-gradient(ellipse at 85% 25%, rgba(239, 68, 68, 0.28) 0%, transparent 45%),
+        linear-gradient(180deg, #4a1c34 0%, #311223 55%, #1d0a15 100%);
+    border-color: #f9a8d4;
+    box-shadow: inset 0 0 24px rgba(249, 168, 212, 0.24), 0 0 0 2px #500724, 0 0 22px rgba(244, 114, 182, 0.32), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-kitty .folder-card-name {
+    font-family: 'Pacifico', cursive;
+    font-size: clamp(1.75rem, 5.4vw, 2.3rem);
+    color: #ffffff;
+    -webkit-text-stroke: 1px #be123c;
+    text-shadow: 0 2px 0 #881337, 0 0 14px rgba(244, 114, 182, 0.9);
+}
+.folder-card.theme-kitty .folder-card-count,
+.folder-card.theme-kitty .folder-card-count span { color: #fbcfe8; }
+
+/* MARIO BROS — Rojo / Verde Tubería / Amarillo Moneda */
+.folder-card.theme-mario {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 25% 40%, rgba(220, 38, 38, 0.38) 0%, transparent 55%),
+        radial-gradient(ellipse at 82% 75%, rgba(34, 197, 94, 0.34) 0%, transparent 52%),
+        linear-gradient(180deg, #331919 0%, #1c2419 55%, #101610 100%);
+    border-color: #ef4444;
+    box-shadow: inset 0 0 24px rgba(220, 38, 38, 0.22), 0 0 0 2px #052e16, 0 0 22px rgba(239, 68, 68, 0.26), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-mario .folder-card-name {
+    font-family: 'Silkscreen', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.35rem, 4.4vw, 1.9rem);
+    color: #fef08a;
+    text-shadow: 3px 3px 0 #991b1b, -1px -1px 0 #000, 0 0 14px rgba(250, 204, 21, 0.6);
+}
+.folder-card.theme-mario .folder-card-count,
+.folder-card.theme-mario .folder-card-count span { color: #86efac; }
+
+/* POKÉMON / PIKACHU — Amarillo Eléctrico / Rojo Pokébola */
+.folder-card.theme-pokemon {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 45%, rgba(250, 204, 21, 0.38) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(239, 68, 68, 0.32) 0%, transparent 50%),
+        linear-gradient(180deg, #3b300d 0%, #261e09 55%, #171105 100%);
+    border-color: #facc15;
+    box-shadow: inset 0 0 26px rgba(250, 204, 21, 0.24), 0 0 0 2px #422006, 0 0 22px rgba(250, 204, 21, 0.3), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-pokemon .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.9rem, 5.8vw, 2.5rem);
+    letter-spacing: 0.06em;
+    color: #fde047;
+    -webkit-text-stroke: 1.6px #1d4ed8;
+    text-shadow: 0 3px 0 #1e3a8a, 0 0 14px rgba(250, 204, 21, 0.75);
+}
+.folder-card.theme-pokemon .folder-card-count,
+.folder-card.theme-pokemon .folder-card-count span { color: #fef08a; }
+
+/* BOB ESPONJA — Amarillo Esponja / Azul Fondo de Bikini */
+.folder-card.theme-bob {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 45%, rgba(250, 204, 21, 0.36) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 70%, rgba(14, 165, 233, 0.36) 0%, transparent 55%),
+        linear-gradient(180deg, #13394f 0%, #0d2738 55%, #081924 100%);
+    border-color: #fde047;
+    box-shadow: inset 0 0 24px rgba(56, 189, 248, 0.22), 0 0 0 2px #082f49, 0 0 20px rgba(250, 204, 21, 0.24), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-bob .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.85rem, 5.6vw, 2.45rem);
+    letter-spacing: 0.05em;
+    color: #fef08a;
+    -webkit-text-stroke: 1.4px #713f12;
+    text-shadow: 0 3px 0 #422006, 0 0 12px rgba(250, 204, 21, 0.65);
+}
+.folder-card.theme-bob .folder-card-count,
+.folder-card.theme-bob .folder-card-count span { color: #7dd3fc; }
+
+/* NARUTO — Naranja Ninja / Negro Akatsuki */
+.folder-card.theme-naruto {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 45%, rgba(249, 115, 22, 0.4) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(220, 38, 38, 0.32) 0%, transparent 50%),
+        linear-gradient(180deg, #2e1a0e 0%, #1c120d 55%, #110b08 100%);
+    border-color: #f97316;
+    box-shadow: inset 0 0 26px rgba(249, 115, 22, 0.22), 0 0 0 2px #000, 0 0 22px rgba(249, 115, 22, 0.28), 0 10px 24px rgba(0, 0, 0, 0.82);
+}
+.folder-card.theme-naruto .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.9rem, 5.8vw, 2.5rem);
+    letter-spacing: 0.07em;
+    background: linear-gradient(180deg, #fef08a 0%, #fb923c 55%, #dc2626 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    -webkit-text-stroke: 1.4px #000;
+    filter: drop-shadow(0 3px 0 #000) drop-shadow(0 0 12px rgba(249, 115, 22, 0.6));
+}
+.folder-card.theme-naruto .folder-card-count,
+.folder-card.theme-naruto .folder-card-count span { color: #fdba74; }
+
+/* DRAGON BALL / GOKU — Naranja Ki / Dorado Super Saiyajin */
+.folder-card.theme-dragonball {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 40%, rgba(250, 204, 21, 0.4) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(249, 115, 22, 0.38) 0%, transparent 52%),
+        linear-gradient(180deg, #3b220c 0%, #24160a 55%, #140d06 100%);
+    border-color: #fbbf24;
+    box-shadow: inset 0 0 28px rgba(250, 204, 21, 0.25), 0 0 0 2px #431407, 0 0 24px rgba(251, 191, 36, 0.34), 0 10px 24px rgba(0, 0, 0, 0.82);
+}
+.folder-card.theme-dragonball .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.9rem, 5.8vw, 2.5rem);
+    letter-spacing: 0.06em;
+    background: linear-gradient(180deg, #fef9c3 0%, #facc15 45%, #ea580c 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    -webkit-text-stroke: 1.5px #000;
+    filter: drop-shadow(0 3px 0 #000) drop-shadow(0 0 14px rgba(250, 204, 21, 0.7));
+}
+.folder-card.theme-dragonball .folder-card-count,
+.folder-card.theme-dragonball .folder-card-count span { color: #fde047; }
+
+/* DEADPOOL — Rojo Sangre / Negro Katana */
+.folder-card.theme-deadpool {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 45%, rgba(220, 38, 38, 0.42) 0%, transparent 55%),
+        linear-gradient(180deg, #2b0f12 0%, #19090b 55%, #0d0506 100%);
+    border-color: #dc2626;
+    box-shadow: inset 0 0 26px rgba(220, 38, 38, 0.26), 0 0 0 2px #000, 0 0 22px rgba(220, 38, 38, 0.32), 0 10px 24px rgba(0, 0, 0, 0.85);
+}
+.folder-card.theme-deadpool .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.9rem, 5.8vw, 2.5rem);
+    letter-spacing: 0.07em;
+    color: #ef4444;
+    -webkit-text-stroke: 1.5px #000;
+    text-shadow: 0 3px 0 #000, 0 0 14px rgba(239, 68, 68, 0.7);
+}
+.folder-card.theme-deadpool .folder-card-count,
+.folder-card.theme-deadpool .folder-card-count span { color: #fca5a5; }
+
+/* IRON MAN / MARVEL — Rojo Armadura / Dorado / Cian Reactor Arc */
+.folder-card.theme-ironman {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 25% 45%, rgba(220, 38, 38, 0.42) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 65%, rgba(56, 232, 255, 0.26) 0%, transparent 50%),
+        linear-gradient(180deg, #3b1414 0%, #240d0d 55%, #140808 100%);
+    border-color: #eab308;
+    box-shadow: inset 0 0 26px rgba(234, 179, 8, 0.2), 0 0 0 2px #450a0a, 0 0 22px rgba(239, 68, 68, 0.28), 0 10px 24px rgba(0, 0, 0, 0.82);
+}
+.folder-card.theme-ironman .folder-card-name {
+    font-family: 'Chakra Petch', 'Inter', sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: linear-gradient(180deg, #fef08a 0%, #eab308 55%, #dc2626 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    filter: drop-shadow(0 2px 4px #000) drop-shadow(0 0 10px rgba(56, 232, 255, 0.45));
+}
+.folder-card.theme-ironman .folder-card-count,
+.folder-card.theme-ironman .folder-card-count span { color: #67e8f9; }
+
+/* TOY STORY — Cielo Azul / Amarillo Vaquero / Rojo */
+.folder-card.theme-toystory {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 45%, rgba(56, 189, 248, 0.36) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 75%, rgba(250, 204, 21, 0.32) 0%, transparent 52%),
+        linear-gradient(180deg, #153454 0%, #0f243b 55%, #091624 100%);
+    border-color: #facc15;
+    box-shadow: inset 0 0 24px rgba(56, 189, 248, 0.22), 0 0 0 2px #0c4a6e, 0 0 20px rgba(250, 204, 21, 0.24), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-toystory .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.85rem, 5.6vw, 2.45rem);
+    letter-spacing: 0.06em;
+    color: #fde047;
+    -webkit-text-stroke: 1.5px #dc2626;
+    text-shadow: 0 3px 0 #1e3a8a, 0 0 12px rgba(250, 204, 21, 0.6);
+}
+.folder-card.theme-toystory .folder-card-count,
+.folder-card.theme-toystory .folder-card-count span { color: #bae6fd; }
+
+/* SONIC — Azul Velocidad / Anillo Dorado */
+.folder-card.theme-sonic {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 45%, rgba(37, 99, 235, 0.45) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(250, 204, 21, 0.28) 0%, transparent 50%),
+        linear-gradient(180deg, #10255c 0%, #0b193d 55%, #060f26 100%);
+    border-color: #3b82f6;
+    box-shadow: inset 0 0 26px rgba(59, 130, 246, 0.28), 0 0 0 2px #0f172a, 0 0 22px rgba(37, 99, 235, 0.35), 0 10px 24px rgba(0, 0, 0, 0.82);
+}
+.folder-card.theme-sonic .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.9rem, 5.8vw, 2.5rem);
+    letter-spacing: 0.07em;
+    transform: skewX(-8deg);
+    background: linear-gradient(180deg, #ffffff 0%, #60a5fa 50%, #2563eb 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    -webkit-text-stroke: 1.4px #facc15;
+    filter: drop-shadow(0 3px 0 #0f172a) drop-shadow(0 0 12px rgba(59, 130, 246, 0.65));
+}
+.folder-card.theme-sonic .folder-card-count,
+.folder-card.theme-sonic .folder-card-count span { color: #fde047; }
+
+/* MINIONS — Amarillo Banana / Azul Overol */
+.folder-card.theme-minion {
+    background:
+        var(--rivets-4),
+        radial-gradient(ellipse at 30% 45%, rgba(250, 204, 21, 0.38) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(37, 99, 235, 0.36) 0%, transparent 50%),
+        linear-gradient(180deg, #362e10 0%, #1c2438 55%, #0e1424 100%);
+    border-color: #facc15;
+    box-shadow: inset 0 0 24px rgba(250, 204, 21, 0.22), 0 0 0 2px #1e3a8a, 0 0 20px rgba(250, 204, 21, 0.25), 0 10px 24px rgba(0, 0, 0, 0.8);
+}
+.folder-card.theme-minion .folder-card-name {
+    font-family: 'Bangers', 'Chakra Petch', sans-serif;
+    font-size: clamp(1.85rem, 5.6vw, 2.45rem);
+    letter-spacing: 0.06em;
+    color: #fde047;
+    -webkit-text-stroke: 1.4px #1e3a8a;
+    text-shadow: 0 3px 0 #0f172a, 0 0 12px rgba(250, 204, 21, 0.6);
+}
+.folder-card.theme-minion .folder-card-count,
+.folder-card.theme-minion .folder-card-count span { color: #93c5fd; }
